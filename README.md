@@ -51,7 +51,7 @@ g <- lapply(1:2, function(x) igraph::sample_gnm(n=10, m=15)) %@%    # generate l
   node_color(data=letters[1:10], palette='PuOr') %@%                # decorate nodes with node colors
   node_label(data=letters[1:10], color='black', size=0.8) %@%       # decorate nodes with node labels
   node_size(data=1:10, min=15, max=20) %>%                          # decorate nodes with node sizes
-  plot_netview(legend=letters[1:10], ncol=2)                        # plot decorated graphs in panel view
+  plot_netview(legend=letters[1:10], ncol=2)                        # plot decorated graphs in panels
 ```
 
 ## Installation
