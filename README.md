@@ -26,8 +26,9 @@ function:
 ```r
 g <- igraph::sample_gnm(n=10, m=15) %@%                       # generate random graph with 10 nodes
      node_color(data=letters[1:10], palette='BuGn') %@%       # decorate nodes with colors paletted by letters
-     node_size(data=1:10, min=5, max=8) %>%                   # decorate nodes with values rescaled by integers
-     plot_netview()                                           # plot decorated graph from magrittr pipe
+     node_size(data=1:10, min=5, max=8)                       # decorate nodes with values rescaled by integers
+
+g %>% plot_netview()                                          # plot decorated graph from magrittr pipe
 ```
 
 The decorator operator can accept a `data.frame` or `tibble` containing the data to stack on the graph. This
@@ -39,15 +40,16 @@ node_data <- tibble(x=letters[1:10], y=1:10)        # generate 10 x 2 node data 
 g <- igraph::sample_gnm(n=10, m=15) %@%             # generate random graph with 10 nodes
      node_data %@%                                  # decorate graph with node data tibble
      node_color(data='x', palette='BuGn') %@%       # decorate nodes with colors paletted by x
-     node_size(data='y', min=5, max=8) %>%          # decorate nodes with values rescaled by y
-     plot_netview()                                 # plot decorated graph from magrittr pipe
+     node_size(data='y', min=5, max=8)              # decorate nodes with values rescaled by y
+     
+g %>% plot_netview()                                # plot decorated graph from magrittr pipe
 ```
 The pipeline can also be executed on a list of graphs, here we add labels and pipe the list of decorated graphs
 into a panel view with legends:
 
 ```r
 
-g <- lapply(1:2, function(x) igraph::sample_gnm(n=10, m=15)) %@%   # generate list of random graphs
+p <- lapply(1:2, function(x) igraph::sample_gnm(n=10, m=15)) %@%   # generate list of random graphs
      node_data %@%                                                 # decorate graph with node data tibble
      node_color(data='x', palette='PuOr') %@%                      # decorate graphs with node colors
      node_label(data='x', color='black', size=0.8) %@%             # decorate graphs with node labels
