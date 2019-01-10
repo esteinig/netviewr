@@ -19,9 +19,9 @@ working and plotting of `igraph` objects more pleasant by:
 The workhorse of the package is the decorator operator `%@%`, which expects on the left side
 an `igraph` object and on the right side decorator function. Decorator functions transform 
 data into graph attributes and attach them to the correct slots in the graph object for plotting. 
-Decorator operators therefore enables a tidyverse pipeline syntax to decorate graph objects, 
-additionally using the standard `magrittr` pipe operator `%>%` to feed the decorated graph into 
-the plot function:
+Decorator operators therefore enables a tidyverse pipeline syntax to decorate graph objects. The
+pipeline ends with the `magrittr` pipe operator `%>%` to feed the decorated graph into the plot
+function:
 
 ```r
 g <- igraph::sample_gnm(n=10, m=15) %@%                       # generate random graph with 10 nodes
