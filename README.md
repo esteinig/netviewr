@@ -16,10 +16,10 @@ working and plotting of `igraph` objects more pleasant by:
 
 ##
 
-The main workhorse of the packages is the graph decorator operator `%@%`, which expects on the left side
-an `igraph` object and on the right side a `data.frame` or `tibble` to attach to the graph. Data columns 
-can then be used to further decorate the graph with decorator functions. Decorator functions transform the
-data into graph attributes and attach them to the correct slots in the graph object for plotting. 
+The workhorse of the package is the decorator operator `%@%`, which expects on the left side
+an `igraph` object and on the right side a `data.frame` or `tibble` to stack on the graph. Decorator 
+functions can then access data columns to further decorate the graph. Decorator functions transform 
+the data into graph attributes and attach them to the correct slots in the graph object for plotting. 
 
 The decorator operator therefore enables a pipeline syntax to decorate graph objects, additionally using
 the standard `magrittr` pipe operator `%>%` to feed the decorated graph into the plot function:
@@ -45,3 +45,5 @@ install.packages("netviewr")
 # install.packages("devtools")
 devtools::install_github("esteinig/netviewr")
 ```
+## Usage
+
