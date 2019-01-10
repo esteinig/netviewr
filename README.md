@@ -14,7 +14,7 @@ working and plotting of `igraph` objects more pleasant by:
   - stacking data for decorator functions
   - providing geographical projections
 
----
+##
 
 The main workhorse of the packages is the graph decorator operator `%@%`, which expects on the left side
 an `igraph` object and on the right side a `data.frame` or `tibble` to attach to the graph. Data columns 
