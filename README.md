@@ -30,7 +30,7 @@ g <- igraph::sample_gnm(n=10, m=15) %@%                       # generate random 
      plot_netview()                                           # plot decorated graph from magrittr pipe
 ```
 
-The decorator operator can also accept a `data.frame` or `tibble` containing the data to stack on the graph. This
+The decorator operator can accept a `data.frame` or `tibble` containing the data to stack on the graph. This
 allows for passing the column name to the decorator function:
 
 ```r
@@ -41,6 +41,17 @@ g <- igraph::sample_gnm(n=10, m=15) %@%             # generate random graph with
      node_color(data='x', palette='BuGn') %@%       # decorate nodes with colors paletted by x
      node_size(data='y', min=5, max=8) %>%          # decorate nodes with values rescaled by y
      plot_netview()                                 # plot decorated graph from magrittr pipe
+```
+The pipeline can also be executed on a list of graphs, here we add labels and pipe the list of decorated graphs
+into a panel view with legends:
+
+```r
+
+g <- lapply(1:2, function(x) igraph::sample_gnm(n=10, m=15)) %@%    # generate list of random graphs
+  node_color(data=letters[1:10], palette='PuOr') %@%                # decorate nodes with node colors
+  node_label(data=letters[1:10], color='black', size=0.8) %@%       # decorate nodes with node labels
+  node_size(data=1:10, min=15, max=20) %>%                          # decorate nodes with node sizes
+  plot_netview(legend=letters[1:10], ncol=2)                        # plot decorated graphs in panel view
 ```
 
 ## Installation
