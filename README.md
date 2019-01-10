@@ -13,14 +13,16 @@ working and plotting of `igraph` objects more pleasant by:
   - translating data into graph attributes
   - stacking data for decorator functions
   - providing geographical projections
-  
+
+---
+
 The main workhorse of the packages is the graph decorator operator `%@%`, which expects on the left side
 an `igraph` object and on the right side a `data.frame` or `tibble` to attach to the graph. Data columns 
-can then be used to further decorate the graph with decorator functions. Decorator functions transform  
-the data into graph attributes and attach them to the correct slots in the graph object for plotting. 
-The decorator operator therefore enables a pipeline syntax to decorate graph objects, additionally using
-the standard `magrittr` pipe operator `%>%` to feed the decorated graph into the plotting function:
+can then be used to further decorate the graph with decorator functions. Decorator functions transform the
+data into graph attributes and attach them to the correct slots in the graph object for plotting. 
 
+The decorator operator therefore enables a pipeline syntax to decorate graph objects, additionally using
+the standard `magrittr` pipe operator `%>%` to feed the decorated graph into the plot function:
 
 ```r
 node_data <- tibble(x=letters[1:10], y=1:10)        # generate 10 x 2 node data tibble
