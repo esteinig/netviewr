@@ -2,7 +2,7 @@
 
 ![](https://img.shields.io/badge/CRAN-0.1-green.svg)
 ![](https://img.shields.io/badge/docs-latest-green.svg)
-![](https://img.shields.io/badge/lifecycle-maturing-yellow.svg)
+![](https://img.shields.io/badge/lifecycle-maturing-blue.svg)
 
 ## Overview
 
