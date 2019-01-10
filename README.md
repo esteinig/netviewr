@@ -47,7 +47,7 @@ into a panel view with legends:
 
 ```r
 
-g <- lapply(1:2, function(x) igraph::sample_gnm(n=10, m=15)}) %@%   # generate list of random graphs
+g <- lapply(1:2, function(x) igraph::sample_gnm(n=10, m=15)) %@%    # generate list of random graphs
       node_data %@%                                                 # decorate graph with node data tibble
       node_color(data='x', palette='PuOr') %@%                      # decorate graphs with node colors
       node_label(data='x', color='black', size=0.8) %@%             # decorate graphs with node labels
