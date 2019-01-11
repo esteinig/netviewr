@@ -44,7 +44,6 @@ devtools::install_github("esteinig/netviewr")
 ## Usage
 
 #### Decorator Pipelines
-##
 
 Besides decorator functions, decorator operators can accept a `data.frame` or `tibble` containing the data to stack on the graph. This
 allows for passing the column name to the decorator function:
@@ -74,10 +73,13 @@ p <- lapply(1:2, function(x) igraph::sample_gnm(n=10, m=15)) %@%   # generate li
 ```
 
 #### Decorator Functions
-##
+
+...
 
 #### Graph Plot
-##
+
+...
 
 #### Geonet
-##
+
+...
