@@ -76,7 +76,11 @@ p <- lapply(1:2, function(x) igraph::sample_gnm(n=10, m=15)) %@%   # generate li
 
 ...
 
-#### Graph Plot
+#### Custom Decorator Functions
+
+...
+
+#### Graph Plots
 
 ...
 
