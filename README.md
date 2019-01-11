@@ -1,4 +1,4 @@
-# netviewr <a href='https://github.com/esteinig'><img src='man/figures/logo.png' align="right" height="139" /></a>
+# netviewr <a href='https://github.com/esteinig'><img src='man/logos/logo_simple.png' align="right" height="200" /></a>
 
 ![](https://img.shields.io/badge/CRAN-0.1-green.svg)
 ![](https://img.shields.io/badge/docs-latest-green.svg)
