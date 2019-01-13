@@ -93,7 +93,7 @@ base_graph %@% node_color(data='y', palette='PuBu') %>% plot_netview()
 
 ### Decorator Functions
 
-Decorator functions modify the graph object by translating data into graph attributes and attaching it to the appropriate slots in the graph object. These are eventually recognized by the plot function so that graphs can be constructed and decorated independently of the plot arguments, which in their original implementation can be a little arcane. 
+Decorator functions modify the graph object by translating data into graph attributes and attaching it to the appropriate slots in the graph object. These are eventually recognized by the `plot_netview` function so that graphs can be constructed and decorated independently of the `igraph::plot.igraph` arguments, which can be a little arcane in their original implementation. 
 
 **Node Decorators**
 
