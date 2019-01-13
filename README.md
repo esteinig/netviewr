@@ -155,7 +155,7 @@ Map proportional data values over `m` categories (must sum to 1) to nodes that r
 community(g, method='walktrap', polygon=NULL, palette='PuBuGn', opacity=1, border=NA, n_color=NULL, ...)
 ```
 
-Detect communities in the graph and draw polygons colored by `palette` around the clusters in the network topology. Multiple community detection methods can be specified. If `polygon` is a boolean and `TRUE` the first method is used to draw polygons, otherwise the polygon accepts a string specifying which community detections results should be drawn, e.g. `polygon = 'walktrap'`. Any other named arguments that specify the behaviour of the community detection algorithm can be passed via the ellipsis argument (`...`). Community detection can be run before assigning other node attributes. The name of the community detection algorithm then map community membership to node attributes, for example:
+Detect communities in the graph and draw polygons colored by `palette` around the clusters in the network topology. Multiple community detection methods can be specified. If `polygon` is a boolean and `TRUE` the first method is used to draw polygons, otherwise the polygon accepts a string specifying which community detections results should be drawn, e.g. `polygon = 'walktrap'`. Any other named arguments that specify the behaviour of the community detection algorithm can be passed via the ellipsis argument (`...`). Community detection can be run before assigning other node attributes. The name of the community detection algorithm then maps community membership to node attributes, for example:
 
 ```r
 g <- igraph::sample_gnm(n=10, m=15) %@% 
