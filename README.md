@@ -84,8 +84,8 @@ The `plot_netview` function translates the decorated graphs into plots using `ig
 
 ```r
 base_graph <- igraph::sample_gnm(n=10, m=15) %@%
-     node_data %@%                                      
-     node_size(data='y', min=5, max=8) 
+              node_data %@%                                      
+              node_size(data='y', min=5, max=8) 
 
 base_graph %@% node_color(data='x', palette='BuGn') %>% plot_netview()
 base_graph %@% node_color(data='y', palette='PuBu') %>% plot_netview()
