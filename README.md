@@ -75,8 +75,7 @@ graphs %>% plot_netview(legend='x', ncol=2)                             # plot a
 Graphs from lists can also be selected using the `magrittr` select operator `%$%` if the list is named, or the `tidyr` function `extract`:
 
 ```r
-selection <- c(1, 2)
-graphs %>% tidyr::extract(selection) %>% plot_netview()                   # use tidyr extract pipeline
+graphs %>% tidyr::extract(1:2) %>% plot_netview()                   # use tidyr extract pipeline
 ```
 
 ### Plot Netview
