@@ -80,7 +80,7 @@ graphs %>% tidyr::extract(1:2) %>% plot_netview()                   # use tidyr 
 
 ### Plot Netview
 
-The `plot_netview` function translates the decorated graphs into plots using `igraph::plot.igraph`. Note that all settings provided with decorator functions can be overwritten or refined by passing standard arguments for `igraph::plot.igraph` to `netviewr::plot_netview`. Legends and titles can be set using the `legend` and `title` arguments. If either `ncol` or `nrow` are set, the function expects a list of graphs, which is then translated into a panel view containing up to four plots. Graphs can be piped into the plot function using the `magrittr` operator `%>%` - this allows users to configure graphs by setting a basic  configuration, and then change attributes on subsequent graph assignments.
+The `plot_netview` function translates the decorated graphs into plots using `igraph::plot.igraph`. Note that all settings provided with decorator functions can be overwritten or refined by passing standard arguments for `igraph::plot.igraph` to `netviewr::plot_netview`. Legends and titles can be set using the `legend` and `title` arguments. If either `ncol` or `nrow` are set, the function expects a list of graphs, which is then translated into a panel view containing up to four plots. Graphs can be piped into the plot function using the `magrittr` operator `%>%` - this allows users to configure graphs by setting a basic configuration, and then change attributes on subsequent graph assignments.
 
 ```r
 base_graph <- igraph::sample_gnm(n=10, m=15) %@%
@@ -147,7 +147,7 @@ Map string or factorial data to a node shape, recycles values if more data level
 node_pie(g, data=NULL, palette='BuGn', n_color=NULL, border_color='black', match_func=dplyr::starts_with)
 ```
 
-Map proportional data values over `m` categories (must sum to 1) to nodes that represent pie graphs, where each slice is colored according to `palette`. Data can be a `tibble`, `data.frame` or string column name, in which case the data argument uses the `match_func` to select the columns from the data the graph was decorated with. For instance, if all columns that hold the pie graph values start with `pie`, such as `pie_1`, `pie_2` and `pie_3`, the data argument would be `data = 'pie'`.
+Map proportional data values over `m` categories (must sum to 1) to nodes that represent pie graphs, where each slice is colored according to `palette`. Data can be a `tibble`, `data.frame` or string column name, in which case the data argument uses the `match_func` to select the columns from the data the graph was decorated with. For instance, if all columns that hold the pie graph values start with `pie`, such as `pie_1`, `pie_2` and `pie_3` the data argument would be `data = 'pie'`.
 
 <img src='man/plots/pie_1.png' height="300" />
 
