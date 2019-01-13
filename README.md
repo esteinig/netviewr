@@ -137,8 +137,6 @@ Map string or factorial data to a node shape, recycles values if more data level
 
 <img src='man/plots/shape_1.png' height="300" /> <img src='man/plots/shape_2.png' height="300" />
 
-##
-
 **Special Decorators**
 
 ##
