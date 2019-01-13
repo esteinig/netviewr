@@ -7,7 +7,7 @@
 ## Overview
 
 The `netviewr` package offers a set of operators and functions that make 
-working with data-driven plots of `igraph` objects more pleasant, mainly by:
+working with data-driven plots of `igraph` objects more pleasant by:
   
   - decorating graph objects with user data
   - translating data into graph attributes
