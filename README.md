@@ -81,7 +81,7 @@ graphs %>% tidyr::extract(selection) %>% plot_netview()                   # use 
 
 ### Plot Netview
 
-The `plot_netview` function translates the decorated graphs into plots using `igraph::plot.igraph`. Note that all settings provided with decorator functions can be overwritten or refined by passing standard arguments for `igraph::plot.igraph` to `netviewr::plot_netview`. Legends and titles can be set using the `legend` and `title` arguments. If either `ncol` or `nrow` are set, the function expects a list of graphs, which is then translated into a panel view containing up to four graphs (experimental). Graphs can be piped into the plot function using the `magrittr` operator `%>%` - this allows users to configure graphs by setting a basic  configuration, and then change attributes on subsequent graph assignments.
+The `plot_netview` function translates the decorated graphs into plots using `igraph::plot.igraph`. Note that all settings provided with decorator functions can be overwritten or refined by passing standard arguments for `igraph::plot.igraph` to `netviewr::plot_netview`. Legends and titles can be set using the `legend` and `title` arguments. If either `ncol` or `nrow` are set, the function expects a list of graphs, which is then translated into a panel view containing up to four plots. Graphs can be piped into the plot function using the `magrittr` operator `%>%` - this allows users to configure graphs by setting a basic  configuration, and then change attributes on subsequent graph assignments.
 
 ```r
 base_graph <- igraph::sample_gnm(n=10, m=15) %@%
@@ -89,10 +89,7 @@ base_graph <- igraph::sample_gnm(n=10, m=15) %@%
      node_size(data='y', min=5, max=8) 
 
 base_graph %@% node_color(data='x', palette='BuGn') %>% plot_netview()
-
 base_graph %@% node_color(data='y', palette='PuBu') %>% plot_netview()
-
-
 ```
 
 ### Decorator Functions
