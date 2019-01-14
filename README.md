@@ -22,11 +22,11 @@ stack their outputs onto the graph. The pipeline ends with the `magrittr` pipe o
 into the plot function:
 
 ```r
-g <- igraph::sample_gnm(n=10, m=15) %@%                       # generate random graph with 10 nodes
-     node_color(data=letters[1:10], palette='BuGn') %@%       # decorate nodes with colors paletted by letters
-     node_size(data=1:10, min=5, max=8)                       # decorate nodes with values rescaled by integers
+g <- igraph::sample_gnm(n=10, m=15) %@%                      
+     node_color(data=letters[1:10], palette='BuGn') %@%      
+     node_size(data=1:10, min=5, max=8)                     
 
-g %>% plot_netview()                                          # plot decorated graph from magrittr pipe
+g %>% plot_netview()                
 ```
 
 ## Installation
@@ -58,18 +58,16 @@ g <- igraph::sample_gnm(n=10, m=15) %@%             # generate random graph with
 g %>% plot_netview()                                # plot decorated graph from magrittr pipe
 ```
 
-The pipeline can also be executed on a list of graphs, here we add labels and pipe the list of decorated graphs
-into a panel view with legends. 
+The pipeline can also be executed on a list of graphs: 
 
 ```r
 
-graphs <- lapply(1:2, function(x) igraph::sample_gnm(n=10, m=15)) %@%   # generate list of random graphs
-          node_data %@%                                                 # decorate graphs with node tibble
-          node_color(data='x', palette='PuOr') %@%                      # decorate graphs with node colors
-          node_label(data='x', color='black', size=0.8) %@%             # decorate graphs with node labels
-          node_size(data='y', min=15, max=20)                           # decorate graphs with node sizes
+graphs <- lapply(1:2, function(x) igraph::sample_gnm(n=10, m=15)) %@%
+          node_data %@%                                                 
+          node_color(data='x', palette='PuOr') %@%                      
+          node_size(data='y', min=15, max=20)                          
      
-graphs %>% plot_netview(legend='x', ncol=2)                             # plot all decorated graphs
+graphs %>% plot_netview(legend='x')                     
 ```
 
 Graphs from lists can also be selected using the `magrittr` select operator `%$%` if the list is named, or the `tidyr` function `extract`:
