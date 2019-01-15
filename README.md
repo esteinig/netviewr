@@ -13,6 +13,8 @@ working with data-driven plots of `igraph` objects more pleasant by:
   - translating data into graph attributes
   - mapping to geographical projections
 
+Node that an alias for the graph decorator operator is `%g%` if you need to avoid the namespace clash with `purrr::%@%` which is an attribute assignment operator.
+
 ##
 
 The workhorse of the package is the decorator operator `%@%`. It accepts an `igraph` object (left side) and pipes it 
