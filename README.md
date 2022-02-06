@@ -139,13 +139,12 @@ Ideally the input matrix has few missing data, as these may bias the mutal *k*-n
 
 **Population graph inference**
 
-Simple graph inference from *k* = 5 - *k* = 20 with default plotting:
+Simple graph construction from distance matrix file (symmetrical) over a range of *k* and default plotting:
 
 ```r
-graphs -> netviewr::netview(
-  netviewr::read_dist("dist.tsv", sep="\t"), k=1:20
-)
-graphs %>% netviewr::plot_netview()
+netviewr::netview(
+  netviewr::read_dist("dist.tsv", sep="\t"), k=10:20
+) %>% netviewr::plot_netview()
 ```
 
 
