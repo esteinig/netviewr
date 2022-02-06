@@ -1,8 +1,8 @@
 # netviewr <a href='https://github.com/esteinig'><img src='man/logos/logo_simple.png' align="right" height="200" /></a>
 
-![](https://img.shields.io/badge/published-MolEcoRes-green.svg)
 ![](https://img.shields.io/badge/lang-R-blue.svg)
 ![](https://img.shields.io/badge/version-2.1.0-blue.svg)
+![](https://img.shields.io/badge/published-MolEcoRes-green.svg)
 
 ## Overview
 
