@@ -1,9 +1,5 @@
 # netviewr <a href='https://github.com/esteinig'><img src='man/logos/logo_simple.png' align="right" height="200" /></a>
 
-![](https://img.shields.io/badge/CRAN-0.1-41b6c4.svg)
-![](https://img.shields.io/badge/docs-latest-41b6c4.svg)
-![](https://img.shields.io/badge/lifecycle-experimental-orange.svg)
-
 ## Overview
 
 The `netviewr` package offers a set of operators and functions that make 
@@ -11,9 +7,30 @@ working with data-driven plots of `igraph` objects more pleasant by:
   
   - decorating graph objects with user data
   - translating data into graph attributes
-  - mapping to geographical projections
+  - plotting decorated graphs smoothly
 
-##
+`Netviewr` is built with its original applciation in mind, which is the visualization of genetic population structure and associated meta data from genome-wide single nucleotide polymorphisms (SNPs) for both eukaryotic and prokaryotic species. While it is not a suitable package for __determining__ population structure, it can be used to effectively __visualize__ data across population structures; it should be used in conjunction with other statistically more sophisticated tools like DAPC or Admixture, and provides specialised functions for genetic applications, including pie charts for admixture proportions of each inidvidual sample and classification of individuals into distinct populations using community-detection algorithms.
+
+## Citation
+
+If you are using `netviewr` for research applications, for now please cite:
+
+> Steinig et al. (2016) - Netview P: a network visualization tool to unravel complex population structure using genome‐wide SNPs - Molecular Ecology Resources 16 (1), 216-227
+
+## Installation
+
+``` r
+
+# Install netviewr:
+install.packages("netviewr")
+
+# Development version from GitHub:
+# install.packages("devtools")
+devtools::install_github("esteinig/netviewr")
+```
+## Usage
+
+### Graph decorators
 
 The workhorse of the package is the decorator operator `%@%`. It accepts an `igraph` object (left side) and pipes it 
 into a decorator function (right side). Decorator functions transform data into graph attributes and attach them
@@ -32,20 +49,7 @@ g %>% plot_netview()
 
 **Note** that an alias for the graph decorator operator is `%g%` if you need to avoid the namespace clash with `purrr::%@%` which is an attribute assignment operator.
 
-## Installation
-
-``` r
-
-# Install netviewr:
-install.packages("netviewr")
-
-# Development version from GitHub:
-# install.packages("devtools")
-devtools::install_github("esteinig/netviewr")
-```
-## Usage
-
-### Decorator Pipelines
+### Decorator pipelines
 
 Besides decorator functions, decorator operators can accept a `data.frame` or `tibble` containing the data to stack on the graph. This
 allows for passing the column name to the decorator function:
@@ -79,7 +83,7 @@ Graphs from lists can also be selected using the `magrittr` select operator `%$%
 graphs %>% tidyr::extract(1:2) %>% plot_netview()                   # use tidyr extract pipeline
 ```
 
-### Plot Netview
+### Netview plots
 
 The `plot_netview` function translates the decorated graphs into plots using `igraph::plot.igraph`. Note that all settings provided with decorator functions can be overwritten or refined by passing standard arguments for `igraph::plot.igraph` to `netviewr::plot_netview`. Legends and titles can be set using the `legend` and `title` arguments. If either `ncol` or `nrow` are set, the function expects a list of graphs, which is then translated into a panel view containing up to four plots. Graphs can be piped into the plot function using the `magrittr` operator `%>%` - this allows users to configure graphs by setting a basic configuration, and then change attributes on subsequent graph assignments.
 
