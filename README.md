@@ -142,9 +142,7 @@ Ideally the input matrix has few missing data, as these may bias the mutal *k*-n
 Simple graph construction from distance matrix file (symmetrical) over a range of *k* and default plotting:
 
 ```r
-netviewr::netview(
-  netviewr::read_dist("dist.tsv", sep="\t"), k=10:20
-) %>% netviewr::plot_netview()
+netviewr::netview(netviewr::read_dist("dist.tsv", sep="\t"), k=10:20 %>% netviewr::plot_netview()
 ```
 
 
