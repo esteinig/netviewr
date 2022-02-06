@@ -13,7 +13,7 @@ working with data-driven plots of `igraph` objects more pleasant by:
   - translating data into graph attributes
   - plotting decorated graphs smoothly
 
-`Netviewr` is built with its original applciation in mind, which is the visualization of genetic population structure and associated meta data from genome-wide single nucleotide polymorphisms (SNPs) for both eukaryotic and prokaryotic species. While it is not a suitable package for __determining__ population structure, it can be used to effectively __visualize__ data across population structures; it should be used in conjunction with other statistically more sophisticated tools like DAPC or Admixture. `Netviewr` provides specialised functions for genetic applications, including pie charts for admixture proportions of each inidvidual sample and classification of individuals into distinct populations using community-detection algorithms.
+`Netviewr` is built with its original application in mind, which is the visualization of genetic population structure and associated meta data from genome-wide single nucleotide polymorphisms (SNPs) for both eukaryotic and prokaryotic species. While it is not a suitable package for __determining__ population structure, it can be used to effectively __visualize__ data (traits, phenotypes, genotypes...) across population structures; it should be used in conjunction with other statistically more sophisticated tools like DAPC or Admixture. 
 
 ## Citation
 
@@ -122,6 +122,8 @@ base_graph %@% node_color(data='y', palette='PuBu') %>% plot_netview()
 ```
 
 ## Population genomics
+
+`Netviewr` provides specialised functions for genetic applications, including pie charts for admixture proportions of each inidvidual sample and classification of individuals into distinct populations using community-detection algorithms.
 
 ### Population graphs
 
