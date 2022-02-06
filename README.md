@@ -1,5 +1,9 @@
 # netviewr <a href='https://github.com/esteinig'><img src='man/logos/logo_simple.png' align="right" height="200" /></a>
 
+![](https://img.shields.io/badge/published-MolEcoRes-green.svg)
+![](https://img.shields.io/badge/lang-R-blue.svg)
+![](https://img.shields.io/badge/version-2.1.0-blue.svg)
+
 ## Overview
 
 The `netviewr` package offers a set of operators and functions that make 
@@ -9,7 +13,7 @@ working with data-driven plots of `igraph` objects more pleasant by:
   - translating data into graph attributes
   - plotting decorated graphs smoothly
 
-`Netviewr` is built with its original applciation in mind, which is the visualization of genetic population structure and associated meta data from genome-wide single nucleotide polymorphisms (SNPs) for both eukaryotic and prokaryotic species. While it is not a suitable package for __determining__ population structure, it can be used to effectively __visualize__ data across population structures; it should be used in conjunction with other statistically more sophisticated tools like DAPC or Admixture, and provides specialised functions for genetic applications, including pie charts for admixture proportions of each inidvidual sample and classification of individuals into distinct populations using community-detection algorithms.
+`Netviewr` is built with its original applciation in mind, which is the visualization of genetic population structure and associated meta data from genome-wide single nucleotide polymorphisms (SNPs) for both eukaryotic and prokaryotic species. While it is not a suitable package for __determining__ population structure, it can be used to effectively __visualize__ data across population structures; it should be used in conjunction with other statistically more sophisticated tools like DAPC or Admixture. `Netviewr` provides specialised functions for genetic applications, including pie charts for admixture proportions of each inidvidual sample and classification of individuals into distinct populations using community-detection algorithms.
 
 ## Citation
 
@@ -17,7 +21,28 @@ If you are using `netviewr` for research applications, for now please cite:
 
 > Steinig et al. (2016) - Netview P: a network visualization tool to unravel complex population structure using genome‐wide SNPs - Molecular Ecology Resources 16 (1), 216-227
 
-## Installation
+## Table of contents
+
+**`v2.1.0`**
+
+- [Install](#install)
+- [General usage](#usage)
+  - [Graph decorators](#graph-decorators)
+  - [Decorator pipelines](#decorator-pipelines)
+  - [Netview plots](#netview-plots)
+- [Population genomics](#population-genomics)
+  - [Population graphs](#population-graphs)
+  - [Community detection](#community-detection)
+  - [K-selection plots](#k-selection-plots)
+  - [Admixture plots](#admixture-plots)
+- [Decorator functions](#decorator-functions)
+  - [Node decorators](#node-decorators)
+  - [Special decorators](#special-decorators)
+  - [Custom decorators](#custom-decorators)
+- [Contributions](#contributions)
+
+
+## Install
 
 ``` r
 
@@ -96,11 +121,29 @@ base_graph %@% node_color(data='x', palette='BuGn') %>% plot_netview()
 base_graph %@% node_color(data='y', palette='PuBu') %>% plot_netview()
 ```
 
-### Decorator Functions
+## Population genomics
+
+### Population graphs
+
+...
+
+### Community detection
+
+...
+
+### K-selection plots
+
+...
+
+### Admixture plots
+
+...
+
+## Decorator functions
 
 Decorator functions modify the graph object by translating data into graph attributes and attaching it to the appropriate slots in the graph object. These are eventually recognized by the `plot_netview` function so that graphs can be constructed and decorated independently of the `igraph::plot.igraph` arguments, which can be a little arcane in their original implementation. 
 
-**Node Decorators**
+### Node decorators
 
 ##
 
@@ -142,7 +185,7 @@ Map string or factorial data to a node shape, recycles values if more data level
 
 <img src='man/plots/shape_1.png' height="300" /> <img src='man/plots/shape_2.png' height="300" />
 
-**Special Decorators**
+### Special decorators
 
 ##
 
@@ -170,7 +213,7 @@ g <- igraph::sample_gnm(n=10, m=15) %@%
 
 <img src='man/plots/community_1.png' height="300" /> <img src='man/plots/community_2.png' height="300" />
 
-#### Custom Decorator Functions
+### Custom decorators
 
 Decorators are functions that require a graph object (`g`) and return an anonymous function (`func`) that first modifies and then returns the graph object. A simple example would be a decorator that assigns node colors via a `colorize` function. Without error checks and other essential behaviour and for demonstration purpose only, this could then be written as:
 
@@ -184,8 +227,12 @@ return(func)
 }
 ```
 
-#### Geonet
+### Geonet
 
-...
+Geographical decorators and projections *under development*
+
+## Contributions
+
+We welcome any and all suggestions or pull requests. Please feel free to open an issue in the repository on `GitHub`.
 
 
