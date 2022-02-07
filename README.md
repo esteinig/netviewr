@@ -142,11 +142,16 @@ Ideally the input matrix has few missing data, as these may bias the mutal *k*-n
 Simple graph construction from distance matrix file (symmetrical) over a range of *k* and default plotting:
 
 ```r
-netviewr::read_dist("dist.tsv", sep="\t") %>% netviewr::netview(k=10:20) %>% netviewr::plot_netview()
+netviewr::read_dist("dist.tsv", sep="\t") %>% netviewr::netview(k=20) %>% netviewr::plot_netview()
 ```
 
+This pipeline also works without piping:
 
-
+```r
+dist_matrix <- netviewr::read_dist("dist.tsv", sep="\t")
+graph <- netviewr::netview(dist_matrix, k=20)
+plot_netview(graph)
+```
 
 
 ...
