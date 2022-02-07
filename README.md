@@ -125,7 +125,9 @@ base_graph %@% node_color(data='y', palette='PuBu') %>% plot_netview()
 
 `Netview` was originally developed to provide a means of visualizing complex, high-resolution population structure and associated meta-data. In the original publications by Neuditschko et al. (2012) and Steinig et al. (2016) we have shown that these visualizations are quite useful for natural populations (e.g. wolf populations in Alaska) and artificial systems (e.g. pearl oyster pedigrees in aquaculture farms). In subsequent publications, we have also used `Netview` to visualize population structure of bacterial pathogens (e.g. Staphylococcus aureus) and many other cool examples now exist in the literature (e.g. shark hybridisation in the Galapagos).
 
-However, it should be noted that `Netview` is primarily designed to visualize structure from genetic similarity matrices, not determine a 'correct' population structure, or admixture proportions between populations. One of the reasons for this is that we directly use the input distance matrices in the mutual k-nearest-neighbor algorithm where the parameter *k* can be selected to unravel the genetic structure in the network topologies at *any* resolution: a smaller *k* results in many disjointed groups of individuals (high resolution) and a larger *k* causes the topologies to become more heterogenous (low resolution). As such, we always recommend to run other, statistically more sophisticated software for population structure determination (like DAPC. Structure or Admixture) in parallel with `Netview`. However, we also now provide a *k* selection method, which can be used to determine an 'optimal' value for *k* based on the congruence of cluster (community) detection algorithms run over a range of *k* values (see below). Community detection algorithms can also be used to demarcate and sort individuals into groups determined from the structure in the network topologies.
+However, it should be noted that `Netview` is primarily designed to visualize structure from genetic similarity matrices, not determine a 'correct' population structure, or admixture proportions between populations. One of the reasons for this is that we directly use the input distance matrices in the mutual k-nearest-neighbor algorithm where the parameter *k* can be selected to unravel the genetic structure in the network topologies at *any* resolution: a smaller *k* results in many disjointed groups of individuals (high resolution) and a larger *k* causes the topologies to become more heterogenous (low resolution). As such, we always recommend to run other, statistically more sophisticated software for population structure determination (like DAPC. Structure or Admixture) in parallel with `Netview`. 
+
+However, we also now provide a *k* selection method, which can be used to determine an 'optimal' value for *k* based on the congruence of cluster (community) detection algorithms run over a range of *k* values (see below). Community detection algorithms can also be used to demarcate and sort individuals into groups determined from the structure in the network topologies.
 
 `Netviewr` provides specialised decorator functions for these genetic applications, including pie charts for admixture proportions of each inidvidual sample (e.g. derived from `Admixture`) and classification of individuals into distinct populations using community-detection algorithms.
 
@@ -153,6 +155,12 @@ graph <- netviewr::netview(dist_matrix, k=20)
 plot_netview(graph)
 ```
 
+
+**Graph plot interpretation**
+
+Nodes that share many edges (mutal nearest neighbors) tend to cluster together in the default network visualization algorithm (`Fruchterman-Reingold`). It needs to be stressed that the overall layout of the graph **does not hold any interpretaive value** - that is clusters that are not connected or connected only by few edges can be rearranged by the layout algorithm, so that two closely located but unconnected clusters of nodes, do **not** indicate genetic similarity. This information is exclusively determined by the edges.
+
+For example:
 
 ...
 
