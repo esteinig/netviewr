@@ -31,7 +31,7 @@ If you are using `netviewr` for research applications, for now please cite:
   - [Community detection](#community-detection)
   - [K-selection plots](#k-selection-plots)
   - [Admixture plots](#admixture-plots)
-- [General usage](#usage)
+- [General graph visualization](#general-graph)
   - [Graph decorators](#graph-decorators)
   - [Decorator pipelines](#decorator-pipelines)
   - [Netview plots](#netview-plots)
@@ -53,7 +53,6 @@ install.packages("netviewr")
 # install.packages("devtools")
 devtools::install_github("esteinig/netviewr")
 ```
-## Usage
 
 ## Population genomics
 
@@ -110,7 +109,7 @@ For example:
 
 ...
 
-## General usage 
+## General graph visualization 
 
 ### Graph decorators
 
@@ -263,7 +262,7 @@ node_color <- function(g, data=NULL, palette='BuGn', ...){
     V(g)$color <- colorize(data, palette)
     return(g)  
   }
-return(func)
+  return(func)
 }
 ```
 
