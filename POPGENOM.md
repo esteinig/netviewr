@@ -12,9 +12,9 @@ We do now provide a selection method, which can be used to determine an 'optimal
 
 ### Input distance matrix
 
-Before using `Netview` to obtain a mutual *k*-nearest-neighbor graph, a distance matrix should be computed that is suitable for your type of data. For example, for eukaryotic SNP panels, you may want to use the `1-IBS` matrix that can be computed in `PLINK`. For others applications, e.g. in bacterial pathogen whole genome sequence data, you may want to compute a simple SNP distance matrix from reference alignments, e.g. with the excellent Rust package [`psdm`](https://github.com/mbhall88/psdm). You can also use a phylogenetic tree as the basis for your distance matrix, e.g. by computing pairwise root-to-tip distance between samples, or even a completely non-genetic distance measure! 
+Before using `Netview` to obtain a mutual *k*-nearest-neighbor graph, a distance matrix should be computed that is suitable for your type of data. For example, for eukaryotic SNP panels, you may want to use the `1-IBS` matrix that can be computed in `PLINK`. For others applications, e.g. in bacterial pathogen whole genome sequence data, you may want to compute a simple SNP distance matrix from reference alignments, e.g. with the excellent Rust package [`psdm`](https://github.com/mbhall88/psdm). You can also use a phylogenetic tree as the basis for your distance matrix, e.g. by computing pairwise root-to-tip distance between samples, or even using a non-genetic distance measure of similarity.
 
-Ideally the input matrix has few missing data, as these may bias the mutal *k*-nearest-neighbor algorithms to find similarity between individuals with shared missing sites. Data on which the distances are based should be reasonably high resolution (i.e. SNPs not microsatellites) as ultimately, the mutual *k*-nearest-neighbor algorithm is a 'dumb' machine learning approach and requires suitable high resolution data to work with in the first place.
+Ideally the input matrix has few missing data, as these may bias the mutal nearest-neighbor algorithm to find similarity between individuals with shared missing sites. Data on which the distances are based should be reasonably high resolution (i.e. SNPs, not microsatellites) as ultimately we employ a 'dumb' machine learning approach which requires suitable high resolution data.
 
 ### Population graph inference
 
