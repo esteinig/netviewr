@@ -54,7 +54,7 @@ install.packages("netviewr")
 devtools::install_github("esteinig/netviewr")
 ```
 
-## Graph visualization
+## General example
 
 ```r
 node_data <- tibble(x=letters[1:10], y=1:10)        # generate 10 x 2 node data tibble
@@ -67,14 +67,13 @@ g <- igraph::sample_gnm(n=10, m=15) %@%             # generate random graph with
 g %>% plot_netview()                                # plot decorated graph from magrittr pipe 
 ```
 
-## Population Genomics
+## Population genomics example
 
 ```r
 netviewr::read_dist("dist.tsv", sep="\t") %>% netviewr::netview(k=20) %>% netviewr::plot_netview()
 ```
 
-## Examples
-
+## Netview plot examples
 
 <img src='man/plots/color_1.png' height="300" /> <img src='man/plots/size_2.png' height="300" />
 <img src='man/plots/labels_2.png' height="300" /> <img src='man/plots/shape_2.png' height="300" />
