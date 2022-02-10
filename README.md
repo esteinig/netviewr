@@ -54,6 +54,32 @@ install.packages("netviewr")
 devtools::install_github("esteinig/netviewr")
 ```
 
+## Graph visualization
+
+```r
+node_data <- tibble(x=letters[1:10], y=1:10)        # generate 10 x 2 node data tibble
+
+g <- igraph::sample_gnm(n=10, m=15) %@%             # generate random graph with 10 nodes
+     node_data %@%                                  # decorate graph with node data tibble
+     node_color(data='x', palette='BuGn') %@%       # decorate nodes with colors paletted by x
+     node_size(data='y', min=5, max=8)              # decorate nodes with values rescaled by y
+     
+g %>% plot_netview()                                # plot decorated graph from magrittr pipe 
+```
+
+## Population Genomics
+
+```r
+netviewr::read_dist("dist.tsv", sep="\t") %>% netviewr::netview(k=20) %>% netviewr::plot_netview()
+```
+
+## Examples
+
+
+<img src='man/plots/color_1.png' height="300" /> <img src='man/plots/size_2.png' height="300" />
+<img src='man/plots/labels_2.png' height="300" /> <img src='man/plots/shape_2.png' height="300" />
+<img src='man/plots/community_1.png' height="300" /> <img src='man/plots/pie_1.png' height="300" />
+
 ## Contributions
 
 We welcome any and all suggestions or pull requests. Please feel free to open an issue in the repository on `GitHub`.
