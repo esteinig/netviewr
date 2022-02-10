@@ -31,7 +31,7 @@ If you are using `netviewr` for research applications, for now please cite:
   - [Community detection](POPGENOM.md#community-detection)
   - [K-selection plots](POPGENOM.md#k-selection-plots)
   - [Admixture plots](POPGENOM.md#admixture-plots)
-- [General graph visualization](GRAPHVIZ.md#general-graph)
+- [Graph visualization](GRAPHVIZ.md#general-graph)
   - [Graph decorators](GRAPHVIZ.md#graph-decorators)
   - [Decorator pipelines](GRAPHVIZ.md#decorator-pipelines)
   - [Netview plots](GRAPHVIZ.md#netview-plots)
