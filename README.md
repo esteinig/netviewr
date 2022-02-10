@@ -69,7 +69,7 @@ g <- igraph::sample_gnm(n=10, m=15) %@%             # generate random graph with
 g %>% plot_netview()                                # plot decorated graph from magrittr pipe 
 ```
 
-## Popgenomics example
+## Popgenom example
 
 Build and plot a mutual k-nearest-neighbor graph from a genetic distance matrix.
 
