@@ -56,6 +56,8 @@ devtools::install_github("esteinig/netviewr")
 
 ## General example
 
+Annotate a graph with data and plot the graph.
+
 ```r
 node_data <- tibble(x=letters[1:10], y=1:10)        # generate 10 x 2 node data tibble
 
@@ -67,13 +69,15 @@ g <- igraph::sample_gnm(n=10, m=15) %@%             # generate random graph with
 g %>% plot_netview()                                # plot decorated graph from magrittr pipe 
 ```
 
-## Population genomics example
+## Popgenomics example
+
+Build and plot a mutual k-nearest-neighbor graph from a genetic distance matrix.
 
 ```r
 netviewr::read_dist("dist.tsv", sep="\t") %>% netviewr::netview(k=20) %>% netviewr::plot_netview()
 ```
 
-## Netview plot examples
+## Plot examples
 
 <img src='man/plots/color_1.png' height="300" /> <img src='man/plots/size_2.png' height="300" />
 <img src='man/plots/labels_2.png' height="300" /> <img src='man/plots/shape_2.png' height="300" />
