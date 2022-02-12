@@ -21,6 +21,10 @@ Before using `Netview` to obtain a mutual *k*-nearest-neighbor graph, a distance
 
 > ⚠️ Data must have the same number of rows as there are nodes and **in the same order** as rows in the input distance matrix.
 
+```r
+library(netviewr)
+```
+
 Let's create a series of mutual k-nearest-neighbor graph from random distances between 20 samples:
 
 ```r
@@ -30,7 +34,7 @@ dist <- matrix(rnorm(400),nrow=20)
 We can then pipe the matrix into the graph builder, noting that the highest value of `k` is `n-1`:
 
 ```r
-dist %>% netviewr::netview(k=1:19)
+dist %>% netview(k=1:19)
 ```
 
 Let's say we have a dataframe specifying some values for each sample, which we want to plot as node colors:
@@ -42,14 +46,14 @@ node_data <- data.frame(some_data=letters[1:20])
 We can now decorate the graphs (`%@%`) with the data frame and use the `node_color` [decorator](DECFUNC.md) to map the data values to colors:
 
 ```r
-g <- dist %>% netviewr::netview(k=1:19) %@% node_data %@% netviewr::node_color(data="some_data", palette="BuGn")
+g <- dist %>% netview(k=1:19) %@% node_data %@% node_color(data="some_data", palette="BuGn")
 ```
 
 Plot the decorated graphs individually or as a panel:
 
 ```r
- g %>% netviewr::plot_netview()                 # single plots
- g %>% netviewr::plot_netview(nrow=4, ncol=5)   # panel plots
+ g %>% plot_netview()                 # single plots
+ g %>% plot_netview(nrow=4, ncol=5)   # panel plots
 ```
 
 Here the panel view nicely shows the assembly of the mutal k-nearest-neighbor graph with increasing nearest-neighbor parameter. We can use this assembly phase in combination with community detection algorithms to find a stable assembly of the graph.
@@ -60,15 +64,15 @@ Here the panel view nicely shows the assembly of the mutal k-nearest-neighbor gr
 Graph construction from a distance matrix file (symmetrical or triangular, without column or row names) using default plotting without data:
 
 ```r
-netviewr::read_dist("dist.tsv", sep="\t") %>% netviewr::netview(k=20) %>% netviewr::plot_netview()
+read_dist("dist.tsv", sep="\t") %>% netview(k=20) %>% plot_netview()
 ```
 
 Of course this pipeline also works without piping:
 
 ```r
-dist_matrix <- netviewr::read_dist("dist.tsv", sep="\t")
-graph <- netviewr::netview(dist_matrix, k=20)
-netviewr::plot_netview(graph)
+dist_matrix <- read_dist("dist.tsv", sep="\t")
+g <- netview(dist_matrix, k=20)
+plot_netview(g)
 ```
 
 ### Graph layout and interpretation
