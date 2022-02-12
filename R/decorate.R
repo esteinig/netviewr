@@ -4,14 +4,8 @@
 #'
 #'
 #' @details For examples and tutorials, please see the repository: \url{https://github.com/esteinig/netviewr}
-#'
-#' @export
-#' @import igraph
-#' @import tibble
-#' @import scales
-#' @import dplyr
-#' @import RColorBrewer
 
+#' Example function
 decorate_nodes <- function(g, data=NULL, func=NULL, ...){
 
   # General node decorator format example:
@@ -32,6 +26,7 @@ decorate_nodes <- function(g, data=NULL, func=NULL, ...){
   return(func)
 }
 
+
 #' @export
 node_color <- function(g, data=NULL, condition=NULL, palette='BuGn', color='gray', opacity=1, n_color=NULL) {
 
@@ -41,7 +36,7 @@ node_color <- function(g, data=NULL, condition=NULL, palette='BuGn', color='gray
 
     if (is.null(data)) {
 
-      V(g)$color <- rep(color, vcount(g))
+      igraph::V(g)$color <- rep(color, igraph::vcount(g))
 
     } else {
 
@@ -51,9 +46,9 @@ node_color <- function(g, data=NULL, condition=NULL, palette='BuGn', color='gray
       if (!is.factor(data)) stop('Data must be character or factor.')
 
       if (is.function(condition)) {
-        V(g)$color <- dplyr::if_else(condition(data), colorize(data, palette=palette, n_col=n_color, alpha=opacity), color)
+        igraph::V(g)$color <- dplyr::if_else(condition(data), colorize(data, palette=palette, n_col=n_color, alpha=opacity), color)
       } else {
-        V(g)$color <- colorize(data, palette=palette, n_col=n_color, alpha=opacity)
+        igraph::V(g)$color <- colorize(data, palette=palette, n_col=n_color, alpha=opacity)
       }
     }
     return(g)
@@ -71,13 +66,13 @@ node_size <- function(g, data=NULL, size=1, min=1, max=4) {
 
     if (is.null(data)) {
 
-      V(g)$size <- rep(size, vcount(g))
+      igraph::V(g)$size <- rep(size, igraph::vcount(g))
 
     } else {
 
       if (!is.numeric(data)) stop('Data must be numeric.')
 
-      V(g)$size <- scales::rescale(data, to=c(min, max))
+      igraph::V(g)$size <- scales::rescale(data, to=c(min, max))
     }
     return(g)
   }
@@ -104,7 +99,7 @@ node_shape <- function(g, data=NULL, shape=c('circle', 'square', 'csquare', 'vre
     if (length(shape) < length(levels(data))) shape <- rep(shape, length.out=length(levels(data)))
     else shape <- shape[1:length(levels(data))]
 
-    V(g)$shape <- as.character(plyr::mapvalues(data, from=levels(data), to=shape))
+    igraph::V(g)$shape <- as.character(plyr::mapvalues(data, from=levels(data), to=shape))
 
     return(g)
 
@@ -123,13 +118,13 @@ node_label <- function(g, data=NULL, label=NA, size=0.8, color='black', family='
 
     if (is.null(data)) {
 
-      V(g)$label <- rep(label, vcount(g))
+      igraph::V(g)$label <- rep(label, igraph::vcount(g))
 
     } else {
 
       if (!is.character(data)) stop('Data must be character.')
 
-      V(g)$label<- data
+      igraph::V(g)$label<- data
     }
 
     g$label_settings <- list(
@@ -142,6 +137,7 @@ node_label <- function(g, data=NULL, label=NA, size=0.8, color='black', family='
   return(func)
 }
 
+#' @importFrom magrittr "%>%"
 #' @export
 node_pie <- function(g, data=NULL, palette='BuGn', n_color=NULL, border_color='black', match_func=dplyr::starts_with){
 
@@ -152,8 +148,8 @@ node_pie <- function(g, data=NULL, palette='BuGn', n_color=NULL, border_color='b
     if (tibble::is_tibble(data) | is.data.frame(data)) pie_data <- data()
     else pie_data <- dplyr::select(g$node_data, match_func(data))
 
-    V(g)$pie_data <- pie_data %>% purrr::pmap(c, use.names = F)
-    V(g)$pie_color = lapply(V(g)$pie_data, function(x) colorize(data=names(pie_data), palette=palette, n_col=n_color))
+    igraph::V(g)$pie_data <- pie_data %>% purrr::pmap(c, use.names = F)
+    igraph::V(g)$pie_color = lapply(igraph::V(g)$pie_data, function(x) colorize(data=names(pie_data), palette=palette, n_col=n_color))
 
     g$pie_settings <- list(
       name = names(pie_data),
@@ -166,6 +162,7 @@ node_pie <- function(g, data=NULL, palette='BuGn', n_color=NULL, border_color='b
   return(func)
 }
 
+#' @importFrom magrittr "%>%"
 #' @export
 community <- function(g, method='walktrap', polygon=NULL, palette='PuBuGn', opacity=1, border=NA, n_color=NULL, ...){
 
@@ -173,7 +170,7 @@ community <- function(g, method='walktrap', polygon=NULL, palette='PuBuGn', opac
 
     if (!igraph::is.igraph(g)) stop('Input must be a graph')
 
-    if (is_logical(polygon) & isTRUE(polygon)) polygon <- method[1]
+    if (is.logical(polygon) & isTRUE(polygon)) polygon <- method[1]
 
     algorithms <- sapply(method, function(m) paste0('cluster_', m))
 
@@ -217,7 +214,8 @@ community <- function(g, method='walktrap', polygon=NULL, palette='PuBuGn', opac
   return(func)
 }
 
-
+#' Helper function
+#' @importFrom magrittr "%>%"
 colorize <- function(data=NULL, palette='BuGn', n_col=NULL, r=NULL, alpha=1, verbose=T){
 
   if (!is.null(data)) {
@@ -242,10 +240,12 @@ colorize <- function(data=NULL, palette='BuGn', n_col=NULL, r=NULL, alpha=1, ver
   return(adjustcolor(as.character(col), alpha.f=alpha))
 }
 
+#' Helper function
+#' @importFrom magrittr "%>%"
 get_col <- function(palette, n_col){
   if (is.character(palette) & length(palette) == 1) {
 
-    if (!palette %in% rownames(brewer.pal.info)) stop('Palette is not available in RColorBrewer.')
+    if (!palette %in% rownames(RColorBrewer::brewer.pal.info)) stop('Palette is not available in RColorBrewer.')
 
     if (is.null(n_col)) {
       n_col <- levels(data) %>% length

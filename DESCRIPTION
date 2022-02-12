@@ -5,8 +5,8 @@ Version: 2.1.0.9000
 Author: Eike Steinig
 Maintainer: Eike Steinig <eikejoachim.steinig@gmail.com>
 Description: Graph decorators and pipelines to visualize data on graph objects,
-    with special attention to visualiziation of population structure using 
-    mutal k-nearest-neighbor graphs.
+    with special attention to visualization of genetic population structure 
+    using mutal k-nearest-neighbor graphs.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
@@ -16,8 +16,10 @@ Imports:
     ggplot2,
     scales,
     dplyr,
+    rlang,
     plyr,
-    purrr
+    purrr,
     tibble,
+    magrittr,
     RColorBrewer
-
+RoxygenNote: 7.1.2

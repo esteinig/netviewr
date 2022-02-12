@@ -9,18 +9,14 @@
 #'@param dist                  Input matrix is a distance matrix; converted to similarity matrix by subtracting from 1 [ bool, FALSE ]
 #'@param verbose               Print computation status and results of Horn's Parallel Analysis [ bool, TRUE ]
 
-#'@usage find_contributors(relMatrix, metaData, paranIterations=100, paranCentile=99, distMatrix=FALSE, verbose=TRUE)
+#'@usage find_contributors(matrix, metaData, paran_iterations=100, paran_centile=99, dist=FALSE, verbose=TRUE)
 #'
-#'@return Data frame containing ordered genetic contribution scores (GCS)
+#'@return Tibble containing ordered genetic contribution scores (GCS)
 #'
 #'@details For examples and tutorials, please see the Repository: \url{https://github.com/esteinig/netviewr}
 #'
 #'@export
-#'@import paran
-
 find_contributors <- function(matrix, paran_iterations=100, paran_centile=99, dist=FALSE, verbose=FALSE){
-
-  require(paran)
 
   ### Written by Markus Neuditschko and Mehar Khatkar, modified * for use in NetView R by Eike Steinig
 
@@ -34,7 +30,7 @@ find_contributors <- function(matrix, paran_iterations=100, paran_centile=99, di
   # Added verbosity *
   if(verbose==FALSE){ quiet = TRUE; stat = FALSE } else { quiet = FALSE; stat = TRUE }
 
-  k = paran(matrix, iterations=paran_iterations, centile=paran_centile, quietly=T, stat=T)
+  k = paran::paran(matrix, iterations=paran_iterations, centile=paran_centile, quietly=T, stat=T)
 
   x = eigen(matrix)
 
@@ -55,9 +51,9 @@ find_contributors <- function(matrix, paran_iterations=100, paran_centile=99, di
     scores[[i]] = sum(RSV[[i]]^2)
   }
 
-  scores   = as.data.frame (unlist(scores))
+  scores = as.data.frame(unlist(scores))
   names(scores) = "gcs"
 
-  return(as_tibble(scores))
+  return(tibble::as_tibble(scores))
 
 }

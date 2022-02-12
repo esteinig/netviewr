@@ -14,7 +14,7 @@
 #'
 #'@export
 `%m%` = `%c%` = function(t1, t2) {
-  dplyr::bind_cols(as_tibble(t1), as_tibble(t2))
+  dplyr::bind_cols(tibble::as_tibble(t1), tibble::as_tibble(t2))
 }
 
 #'Graph Decorator Operator
@@ -37,17 +37,17 @@
   # Operator function:
   op <- function(g, f){
 
-    if (!is_igraph(g)) stop('Left-hand input to graph operator must be a graph object or list of graph objects.')
+    if (!igraph::is.igraph(g)) stop('Left-hand input to graph operator must be a graph object or list of graph objects.')
 
-    if (is_function(f)) {
+    if (purrr::is_function(f)) {
 
       g <- f(g)
 
-    } else if (is.data.frame(f) | is_tibble(f)){
+    } else if (is.data.frame(f) | tibble::is_tibble(f)){
 
-      if (nrow(f) == vcount(g)){
+      if (nrow(f) == igraph::vcount(g)){
 
-        if (is_null(g$node_data)) g$node_data <- as_tibble(f) else g$node_data <- dplyr::bind_cols(g$node_data, as_tibble(f))
+        if (is.null(g$node_data)) g$node_data <- tibble::as_tibble(f) else g$node_data <- dplyr::bind_cols(g$node_data, tibble::as_tibble(f))
 
       } else stop('Tibble input must be of length of the number of nodes')
 
@@ -66,6 +66,6 @@
   }
 
   # Input is graph or list of graphs:
-  if (is_igraph(g)) op(g, f) else sapply(g, op, f=f, simplify = FALSE, USE.NAMES = TRUE)
+  if (igraph::is.igraph(g)) op(g, f) else sapply(g, op, f=f, simplify = FALSE, USE.NAMES = TRUE)
 
 }
