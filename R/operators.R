@@ -1,6 +1,5 @@
 #' Meta Operator (Column Concatenation Operator)
-#' --------------------------------------------
-
+#'
 #' Adds a Tibble to the graph attribute `meta` (or concatenates to existing Tibble)
 #' for use in subsequent graph decorators that might use the data argument to select
 #' columns from Tibble:
@@ -17,7 +16,6 @@
 }
 
 #'Graph Decorator Operator
-#'------------------------
 #'
 #'Decorate a graph object (g) a decorator function (f) or a tibble with meta data
 #'for nodes (length: nodes)
