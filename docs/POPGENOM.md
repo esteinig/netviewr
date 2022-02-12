@@ -17,7 +17,38 @@ Ideally the input matrix has few missing data, as these may bias the mutal neare
 
 ### Population graph inference
 
-Simple graph construction from a distance matrix file (symmetrical or triangular, without column or row names) over a range of k-nearest-neighbors using default plotting:
+Let's create a series of mutual k-nearest-neighbor graph from random distances between 20 samples:
+
+```r
+dist <- matrix(rnorm(400),nrow=20)
+```
+
+We can then pipe the matrix into the graph builder, noting that the highest value of `k` is `n-1`:
+
+```r
+dist %>% netview(k=1:19)
+```
+
+Let's say we have a dataframe specifying some values for each sample, which we want to plot as node colors:
+
+```r
+node_data <- data.frame(some_data=letters[1:20])
+```
+
+We can now decorate (`%@%`) the graphs with these data and the `node_color` decorator to map the values to colors:
+
+```r
+g <- dist %>% netview(k=1:19) %@% node_data %@% node_color(data="some_data", palette="BuGnYl")
+```
+
+Plot the decorated graphs individually or as a panel:
+
+```r
+ g %>% plot_netview()                 # individual plots
+ g %>% plot_netview(nrow=4, ncol=5)   # panel plots
+```
+
+Graph construction from a distance matrix file (symmetrical or triangular, without column or row names) over a range of k-nearest-neighbors using default plotting:
 
 ```r
 netviewr::read_dist("dist.tsv", sep="\t") %>% netviewr::netview(k=20) %>% netviewr::plot_netview()
