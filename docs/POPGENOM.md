@@ -48,7 +48,7 @@ Plot the decorated graphs individually or as a panel:
  g %>% plot_netview(nrow=4, ncol=5)   # panel plots
 ```
 
-Graph construction from a distance matrix file (symmetrical or triangular, without column or row names) over a range of k-nearest-neighbors using default plotting:
+Graph construction from a distance matrix file (symmetrical or triangular, without column or row names) over a single pareameter value and using default plotting:
 
 ```r
 netviewr::read_dist("dist.tsv", sep="\t") %>% netviewr::netview(k=20) %>% netviewr::plot_netview()
