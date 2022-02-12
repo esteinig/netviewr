@@ -5,7 +5,7 @@
 \title{Graph Decorator Operator
 ------------------------}
 \usage{
-`igraph::sample_gnm(n=10, m=15) %@% netviewr::node_size(size=5)`
+g \%@\% f
 }
 \arguments{
 \item{g}{graph object or list of graph objects to decorate}

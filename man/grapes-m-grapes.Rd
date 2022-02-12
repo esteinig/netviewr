@@ -8,7 +8,7 @@ Adds a Tibble to the graph attribute `meta` (or concatenates to existing Tibble)
 for use in subsequent graph decorators that might use the data argument to select
 columns from Tibble:}
 \usage{
-`tibble::tibble(x=letters[1:10], y=1:10) %m% tibble::tibble(z=10:1)`
+t1 \%m\% t2
 }
 \arguments{
 \item{t1}{data frame or tibble containing some data}

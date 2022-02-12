@@ -8,8 +8,6 @@
 #'@param t1     data frame or tibble containing some data
 #'@param t2     data frame or tibble containing some other data to merge
 #'
-#'@usage `tibble::tibble(x=letters[1:10], y=1:10) %m% tibble::tibble(z=10:1)`
-#'
 #'@return Merged data frame by columns of t1 and t2
 #'
 #'@export
@@ -26,8 +24,6 @@
 #'
 #'@param g     graph object or list of graph objects to decorate
 #'@param f     decorator function to decorate the graph with, or a tibble
-#'
-#'@usage `igraph::sample_gnm(n=10, m=15) %@% netviewr::node_size(size=5)`
 #'
 #'@return Graph object or list of graph objects with decorated attributes
 #'
