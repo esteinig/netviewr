@@ -25,7 +25,7 @@ Besides decorator functions, decorator operators can accept a `data.frame` or `t
 allows for passing the column name to the decorator function:
 
 ```r
-node_data <- tibble(x=letters[1:10], y=1:10)        # generate 10 x 2 node data tibble
+node_data <- tibble::tibble(x=letters[1:10], y=1:10)        # generate 10 x 2 node data tibble
 
 g <- igraph::sample_gnm(n=10, m=15) %@%             # generate random graph with 10 nodes
      node_data %@%                                  # decorate graph with node data tibble
@@ -50,7 +50,7 @@ graphs %>% plot_netview(legend='x')
 Graphs from lists can also be selected using the `magrittr` select operator `%$%` if the list is named, or the `tidyr` function `extract`:
 
 ```r
-graphs %>% tidyr::extract(1:2) %>% plot_netview()                   # use tidyr extract pipeline
+graphs %>% tidyr::extract(1:2) %>% plot_netview()     # use tidyr extract pipeline
 ```
 
 ## Netview plots
