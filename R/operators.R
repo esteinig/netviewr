@@ -5,6 +5,7 @@
 #' for use in subsequent graph decorators that might use the data argument to select
 #' columns from Tibble:
 #'
+#'@name meta_operator
 #'@param t1     data frame or tibble containing some data
 #'@param t2     data frame or tibble containing some other data to merge
 #'
@@ -22,6 +23,7 @@
 #'for nodes (length: nodes)
 #'Functions can be defined manually as functions that return an anonymous function.
 #'
+#'@name graph_decorator
 #'@param g     graph object or list of graph objects to decorate
 #'@param f     decorator function to decorate the graph with, or a tibble
 #'

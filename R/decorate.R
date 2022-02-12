@@ -1,11 +1,6 @@
-#' Graph Decorator Functions
-#'
-#' Decorate graphs with anonymous functions to be passed to the graph decorator operator `%@%`.
-#'
-#'
-#' @details For examples and tutorials, please see the repository: \url{https://github.com/esteinig/netviewr}
-
 #' Example function
+#' @keywords internal
+#' @noRd
 decorate_nodes <- function(g, data=NULL, func=NULL, ...){
 
   # General node decorator format example:
@@ -216,6 +211,8 @@ community <- function(g, method='walktrap', polygon=NULL, palette='PuBuGn', opac
 
 #' Helper function
 #' @importFrom magrittr "%>%"
+#' @keywords internal
+#' @noRd
 colorize <- function(data=NULL, palette='BuGn', n_col=NULL, r=NULL, alpha=1, verbose=T){
 
   if (!is.null(data)) {
@@ -242,6 +239,8 @@ colorize <- function(data=NULL, palette='BuGn', n_col=NULL, r=NULL, alpha=1, ver
 
 #' Helper function
 #' @importFrom magrittr "%>%"
+#' @keywords internal
+#' @noRd
 get_col <- function(palette, n_col){
   if (is.character(palette) & length(palette) == 1) {
 
