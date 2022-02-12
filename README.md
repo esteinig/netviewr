@@ -46,8 +46,8 @@ If you are using `netviewr` for research applications, for now please cite:
 
 ``` r
 
-# Install netviewr:
-install.packages("netviewr")
+# Install netviewr (not on CRAN yet)
+# install.packages("netviewr")
 
 # Development version from GitHub:
 # install.packages("devtools")
