@@ -52,7 +52,7 @@ Nodes that share many edges (mutal nearest neighbors) tend to cluster together i
 
 For example, note the oreientation of the graph and location of the disconnected clusters in theaw two **equivalent** graphs:
 
-<img src='man/plots/color_1.png' height="300" /> <img src='man/plots/size_1.png' height="300" /> 
+<img src='../man/plots/color_1.png' height="300" /> <img src='../man/plots/size_1.png' height="300" /> 
 
 ## Community detection
 
