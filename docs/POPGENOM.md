@@ -30,7 +30,7 @@ dist <- matrix(rnorm(400),nrow=20)
 We can then pipe the matrix into the graph builder, noting that the highest value of `k` is `n-1`:
 
 ```r
-dist %>% netview(k=1:19)
+dist %>% netviewr::netview(k=1:19)
 ```
 
 Let's say we have a dataframe specifying some values for each sample, which we want to plot as node colors:
@@ -42,14 +42,14 @@ node_data <- data.frame(some_data=letters[1:20])
 We can now decorate the graphs (`%@%`) with the data frame and use the `node_color` [decorator](DECFUNC.md) to map the data values to colors:
 
 ```r
-g <- dist %>% netview(k=1:19) %@% node_data %@% node_color(data="some_data", palette="BuGn")
+g <- dist %>% netviewr::netview(k=1:19) %@% node_data %@% netviewr::node_color(data="some_data", palette="BuGn")
 ```
 
 Plot the decorated graphs individually or as a panel:
 
 ```r
- g %>% plot_netview()                 # single plots
- g %>% plot_netview(nrow=4, ncol=5)   # panel plots
+ g %>% netviewr::plot_netview()                 # single plots
+ g %>% netviewr::plot_netview(nrow=4, ncol=5)   # panel plots
 ```
 
 Here the panel view nicely shows the assembly of the mutal k-nearest-neighbor graph with increasing nearest-neighbor parameter. We can use this assembly phase in combination with community detection algorithms to find a stable assembly of the graph.
