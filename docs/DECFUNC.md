@@ -10,7 +10,7 @@ node_color(g, data=NULL, condition=NULL, palette='BuGn', color='gray', opacity=1
 
 Map string or factorial data to node colors from a `palette` or set a uniform `color` if no data is provided.
 
-<img src='man/plots/color_1.png' height="300" /> <img src='man/plots/color_2.png' height="300" />
+<img src='../man/plots/color_1.png' height="300" /> <img src='../man/plots/color_2.png' height="300" />
 
 ##
 
@@ -20,7 +20,7 @@ node_size(g, data=NULL, size=4,  min=5, max=10)
 
 Map numeric data to node sizes, rescale the data to a range of `min` and `max` sizes, or set a uniform `size` if no data is provided.
 
-<img src='man/plots/size_1.png' height="300" /> <img src='man/plots/size_2.png' height="300" />
+<img src='../man/plots/size_1.png' height="300" /> <img src='../man/plots/size_2.png' height="300" />
 
 ##
 
@@ -30,7 +30,7 @@ node_label(g, data=NULL, label=NA, size=0.8, color='black', family='serif', font
 
 Map string data as labels or set a uniform `label` if no data is provided. Labels can be somewhat refined with arguments in this decorator, but more sophisticated options are available in `igraph::plot.igraph`.
 
-<img src='man/plots/labels_1.png' height="300" /> <img src='man/plots/labels_2.png' height="300" />
+<img src='../man/plots/labels_1.png' height="300" /> <img src='../man/plots/labels_2.png' height="300" />
 
 ##
 
@@ -40,7 +40,7 @@ node_shape(g, data=NULL, shape=c('circle', 'square', ...))
 
 Map string or factorial data to a node shape, recycles values if more data levels available than shapes.
 
-<img src='man/plots/shape_1.png' height="300" /> <img src='man/plots/shape_2.png' height="300" />
+<img src='../man/plots/shape_1.png' height="300" /> <img src='../man/plots/shape_2.png' height="300" />
 
 ### Special decorators
 
@@ -52,7 +52,7 @@ node_pie(g, data=NULL, palette='BuGn', n_color=NULL, border_color='black', match
 
 Map proportional data values over `m` categories (must sum to 1) to nodes that represent pie graphs, where each slice is colored according to `palette`. Data can be a `tibble`, `data.frame` or string column name, in which case the data argument uses the `match_func` to select the columns from the data the graph was decorated with. For instance, if all columns that hold the pie graph values start with `pie`, such as `pie_1`, `pie_2` and `pie_3` the data argument would be `data = 'pie'`.
 
-<img src='man/plots/pie_1.png' height="300" />
+<img src='../man/plots/pie_1.png' height="300" />
 
 ##
 
@@ -68,7 +68,7 @@ g <- igraph::sample_gnm(n=10, m=15) %@%
      node_color(data='walktrap', palette='BuGn')
 ```
 
-<img src='man/plots/community_1.png' height="300" /> <img src='man/plots/community_2.png' height="300" />
+<img src='../man/plots/community_1.png' height="300" /> <img src='../man/plots/community_2.png' height="300" />
 
 ## Custom decorators
 
