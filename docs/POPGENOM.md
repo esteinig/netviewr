@@ -13,11 +13,11 @@ We do provide a selection method, which can be used to determine an 'optimal' va
 
 Before using `Netview` to obtain a mutual *k*-nearest-neighbor graph, a distance matrix should be computed that is suitable for your type of data. For example, for eukaryotic SNP panels, you may want to use the `1-IBS` matrix that can be computed in `PLINK`. For others applications, e.g. in bacterial pathogen whole genome sequence data, you may want to compute a simple SNP distance matrix from reference alignments, e.g. with the excellent Rust package [`psdm`](https://github.com/mbhall88/psdm). You can also use a phylogenetic tree as the basis for your distance matrix, e.g. by computing pairwise root-to-tip distance between samples, or even using a non-genetic distance measure of similarity.
 
-Ideally the input matrix has few missing data, as these may bias the mutal nearest-neighbor algorithm to find similarity between individuals with shared missing sites. Data on which the distances are based should be reasonably high resolution (i.e. SNPs, not microsatellites) as ultimately we employ a 'dumb' machine learning approach which requires suitable high resolution.
+> ⚠️ Missing data may bias the mutal nearest-neighbor algorithm to find similarity between individuals with shared missing sites. Data on which the distances are based should be reasonably high resolution (e.g. not microsatellites).
 
 ### Population graph inference
 
-`Netviewr` can be used along with a `data.frame` or `tibble` to overlay data on the nodes (indivudals) in the graph. For example, you may want to highlight admixture proportions of each individual across the network topology, or investigate the assignment of predefined populations (e.g. pedigrees) compared with the genetic population structure.
+`Netviewr` can be used along with a `data.frame` or `tibble` to overlay assocaited meta data on the nodes (individuals) in the graph. For example, you may want to reference admixture proportions of each individual in the poulation structure, or investigate the assignment of predefined populations (e.g. pedigrees) compared with genetic population structure.
 
 > ⚠️ Data must have the same number of rows as there are nodes and **in the same order** as rows in the input distance matrix.
 
@@ -66,11 +66,13 @@ graph <- netviewr::netview(dist_matrix, k=20)
 netviewr::plot_netview(graph)
 ```
 
-### Graph plot interpretation
+### Graph layout and interpretation
 
-Nodes that share many edges (mutual nearest neighbors) tend to cluster together in the default network visualization algorithm (`Fruchterman-Reingold`). It needs to be stressed that the overall layout of the graph **does not hold any interpretive value** - that is clusters that are not connected or connected only by few edges can be rearranged by the layout algorithm, so that two closely located but unconnected clusters of nodes, do **not** indicate genetic similarity. This information is exclusively determined by the edges.
+Nodes that share many edges (mutual nearest neighbors) tend to cluster together in the default network visualization algorithm (`Fruchterman-Reingold`). 
 
-For example, note the oreientation of the graph and location of the disconnected clusters in theaw two **equivalent** graphs:
+> :warning: Graph layouts **do not hold any interpretive value**. Clusters that are not connected or connected only by few edges can be rearranged by the layout algorithm, so that two closely located but unconnected clusters of nodes do **not** indicate genetic similarity. This information is exclusively determined by the edges.
+
+For example, note the orientation and location of disconnected clusters in these two **equivalent** graphs:
 
 <img src='../man/plots/color_1.png' height="300" /> <img src='../man/plots/size_1.png' height="300" /> 
 
