@@ -20,8 +20,6 @@ Ideally the input matrix has few missing data, as these may bias the mutal neare
 Simple graph construction from a distance matrix file (symmetrical or triangular, without column or row names) over a range of k-nearest-neighbors using default plotting:
 
 ```r
-library(netviewr)
-
 netviewr::read_dist("dist.tsv", sep="\t") %>% netviewr::netview(k=20) %>% netviewr::plot_netview()
 ```
 
