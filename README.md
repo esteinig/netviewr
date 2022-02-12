@@ -54,7 +54,16 @@ install.packages("netviewr")
 devtools::install_github("esteinig/netviewr")
 ```
 
-## General example
+## Population graph example
+
+Build and plot a mutual k-nearest-neighbor graph from a genetic distance matrix.
+
+```r
+netviewr::read_dist("dist.tsv", sep="\t") %>% netviewr::netview(k=20) %>% netviewr::plot_netview()
+```
+
+
+## General graph example
 
 Annotate a graph with data and plot the graph.
 
@@ -67,14 +76,6 @@ g <- igraph::sample_gnm(n=10, m=15) %@%             # generate random graph with
      node_size(data='y', min=5, max=8)              # decorate nodes with values rescaled by y
      
 g %>% plot_netview()                                # plot decorated graph from magrittr pipe 
-```
-
-## Popgenom example
-
-Build and plot a mutual k-nearest-neighbor graph from a genetic distance matrix.
-
-```r
-netviewr::read_dist("dist.tsv", sep="\t") %>% netviewr::netview(k=20) %>% netviewr::plot_netview()
 ```
 
 ## Plot examples
