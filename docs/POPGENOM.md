@@ -17,7 +17,7 @@ Before using `Netview` to obtain a mutual *k*-nearest-neighbor graph, a distance
 
 ### Population graph inference
 
-`Netviewr` can be used along with a `data.frame` or `tibble` to overlay assocaited meta data on the nodes (individuals) in the graph. For example, you may want to reference admixture proportions of each individual in the poulation structure, or investigate the assignment of predefined populations (e.g. pedigrees) compared with genetic population structure.
+`Netviewr` can be used along with a `data.frame` or `tibble` to overlay meta data on the nodes (individuals) in the graph. For example, you may want to reference admixture proportions of each individual in the poulation structure, or investigate the assignment of predefined populations (e.g. pedigrees) compared with genetic population structure.
 
 > ⚠️ Data must have the same number of rows as there are nodes and **in the same order** as rows in the input distance matrix.
 
@@ -39,10 +39,10 @@ Let's say we have a dataframe specifying some values for each sample, which we w
 node_data <- data.frame(some_data=letters[1:20])
 ```
 
-We can now decorate (`%@%`) the graphs with these data and the `node_color` decorator to map the values to colors:
+We can now decorate the graphs (`%@%`) with the data frame and use the `node_color` [decorator](DECFUNC.md) to map the data values to colors:
 
 ```r
-g <- dist %>% netview(k=1:19) %@% node_data %@% node_color(data="some_data", palette="BuGnYl")
+g <- dist %>% netview(k=1:19) %@% node_data %@% node_color(data="some_data", palette="BuGn")
 ```
 
 Plot the decorated graphs individually or as a panel:
@@ -52,7 +52,12 @@ Plot the decorated graphs individually or as a panel:
  g %>% plot_netview(nrow=4, ncol=5)   # panel plots
 ```
 
-Graph construction from a distance matrix file (symmetrical or triangular, without column or row names) over a single pareameter value and using default plotting:
+Here the panel view nicely shows the assembly of the mutal k-nearest-neighbor graph with increasing nearest-neighbor parameter. We can use this assembly phase in combination with community detection algorithms to find a stable assembly of the graph.
+
+<img src='../man/plots/popgraph_panel.png' height="600" />
+
+
+Graph construction from a distance matrix file (symmetrical or triangular, without column or row names) using default plotting without data:
 
 ```r
 netviewr::read_dist("dist.tsv", sep="\t") %>% netviewr::netview(k=20) %>% netviewr::plot_netview()
