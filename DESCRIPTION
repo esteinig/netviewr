@@ -1,0 +1,23 @@
+Package: netviewr
+Type: Package
+Title: Network Visualization And Population Structure
+Version: 2.1.0.9000
+Author: Eike Steinig
+Maintainer: Eike Steinig <eikejoachim.steinig@gmail.com>
+Description: Graph decorators and pipelines to visualize data on graph objects,
+    with special attention to visualiziation of population structure using 
+    mutal k-nearest-neighbor graphs.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports:
+    igraph,
+    cccd,
+    ggplot2,
+    scales,
+    dplyr,
+    plyr,
+    purrr
+    tibble,
+    RColorBrewer
+
