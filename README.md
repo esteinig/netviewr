@@ -21,6 +21,8 @@ If you are using `netviewr` for research applications, for now please cite:
 
 > Steinig et al. (2016) - Netview P: a network visualization tool to unravel complex population structure using genome‐wide SNPs - Molecular Ecology Resources 16 (1), 216-227
 
+If you have trouble accessing the paper, have a look in the [documentation](docs/) folder.
+
 ## Table of contents
 
 **`v2.1.0`**
