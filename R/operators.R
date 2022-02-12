@@ -1,7 +1,7 @@
 #' Meta Operator (Column Concatenation Operator)
 #' --------------------------------------------
 
-#' Adds a Tibble to the graph attribute 'meta' (or concatenates to existing Tibble)
+#' Adds a Tibble to the graph attribute `meta` (or concatenates to existing Tibble)
 #' for use in subsequent graph decorators that might use the data argument to select
 #' columns from Tibble:
 #'
