@@ -59,12 +59,11 @@ devtools::install_github("esteinig/netviewr")
 
 ## Population graph example
 
-Build and plot a mutual k-nearest-neighbor graph from a genetic distance matrix.
+Build and plot a mutual k-nearest-neighbor graph from a (genetic) distance matrix.
 
 ```r
-netviewr::read_dist("dist.tsv", sep="\t") %>% netviewr::netview(k=20) %>% netviewr::plot_netview()
+matrix(rnorm(600), nrow=30) %>% netviewr::netview(k=20) %>% netviewr::plot_netview()
 ```
-
 
 ## General graph example
 
