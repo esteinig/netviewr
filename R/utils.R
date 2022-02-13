@@ -98,16 +98,16 @@ plot_kselect <- function(graphs){
 
     if (is.null(g$communities)) stop(paste0('Graph (', 'k = ', g$k, 'is not decorated with communities'))
 
-    community_sizes <- sapply(g$communities, function(com) length(sizes(com)))
+    community_sizes <- sapply(g$communities, function(com) length(igraph::sizes(com)))
 
     row <- unlist(append(community_sizes, list('k' = g$k)))
 
   })))
 
-  mdat <- melt(data, id='k')
+  mdat <- reshape2::melt(data, id='k')
   names(mdat) <- c('k', 'Method', 'Communities')
 
-  p <- ggplot(data=mdat, aes(x=k, y=Communities, color=Method)) + geom_line(size=1.5)
+  p <- ggplot2::ggplot(data=mdat, ggplot2::aes(x=k, y=Communities, color=Method)) + ggplot2::geom_line(size=1.5)
 
   return(p)
 

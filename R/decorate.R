@@ -167,7 +167,12 @@ community <- function(g, method='walktrap', polygon=NULL, palette='PuBuGn', opac
 
     if (is.logical(polygon) & isTRUE(polygon)) polygon <- method[1]
 
-    algorithms <- sapply(method, function(m) paste0('cluster_', m))
+    if (is.character(method)){
+      algorithms <- c(method)
+    } else {
+      algortihms <- method
+    }
+
 
     args <- list(...)
 
@@ -179,8 +184,8 @@ community <- function(g, method='walktrap', polygon=NULL, palette='PuBuGn', opac
     comms <- list()
     members <- list()
 
-    for (algorithm in method){
-      com <- do.call(paste0('cluster_', algorithm), args=args)
+    for (algorithm in algorithms){
+      com <- do.call(eval(parse(text=paste0('igraph::cluster_', algorithm))), args=args)
       comms[[algorithm]] <- com
       members[[algorithm]] <- igraph::membership(com)
     }

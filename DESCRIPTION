@@ -14,6 +14,7 @@ Imports:
     igraph,
     cccd,
     ggplot2,
+    reshape2,
     scales,
     dplyr,
     rlang,
