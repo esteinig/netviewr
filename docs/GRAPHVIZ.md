@@ -47,12 +47,6 @@ graphs <- lapply(1:2, function(x) igraph::sample_gnm(n=10, m=15)) %@%
 graphs %>% plot_netview(legend='x')                     
 ```
 
-Graphs from lists can also be selected using the `magrittr` select operator `%$%` if the list is named, or the `tidyr` function `extract`:
-
-```r
-graphs %>% tidyr::extract(1:2) %>% plot_netview()     # use tidyr extract pipeline
-```
-
 ## Netview plots
 
 The `plot_netview` function translates the decorated graphs into plots using `igraph::plot.igraph`. Note that all settings provided with decorator functions can be overwritten or refined by passing standard arguments for `igraph::plot.igraph` to `netviewr::plot_netview`. Graphs can be piped into the plot function using the `magrittr` operator `%>%` - this allows users to configure graphs by setting a basic configuration, and then change attributes on subsequent graph assignments.
@@ -63,7 +57,7 @@ base_graph <- igraph::sample_gnm(n=10, m=15) %@%
               node_size(data='y', min=5, max=8) 
 
 base_graph %@% node_color(data='x', palette='BuGn') %>% plot_netview()
-base_graph %@% node_color(data='y', palette='PuBu') %>% plot_netview()
+base_graph %@% node_color(data='x', palette='PuBu') %>% plot_netview()
 ```
 
 Legends and titles can be set using the `legend` and `text` arguments. `Legend` parameter is character that selects a coumn from attached node data when `%@%` is used (see above)
