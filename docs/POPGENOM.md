@@ -102,10 +102,9 @@ For more on community clustering and available algorithms see the [`igraph` refe
 
 ## K-selection plots
 
-We can 'optimise' the k-nearest-neighbor parameter technically (not biologically) - that is select a minimum value at which the network assembly becomes stable and less disjointed. Note that it may still be worth exploring structure and finer scales (lower values) for example to tease apart family pedigrees or explore  
-larger scale relationships between populations (higher values).
+We can 'optimise' the k-nearest-neighbor parameter technically (not biologically) - that is select a minimum value at which the network assembly becomes stable and less disjointed. Note that it may still be worth exploring structure and finer scales (lower values) for example to tease apart family pedigrees or explore larger scale relationships between populations (higher values).
 
-> Empirical values for fine scale structures are around `k = 10 - 20`, with `k = 20 - 30` being a good starting point for exploration
+> Empirical values from real data are around `k = 10 - 20` (fine structure) and `k = 20 - 30` as a good starting point for exploration
 
 One way this can be done is by tracking the assembly of the network across a range of parameter values. Here the panel view from the inference example above nicely shows the assembly of the mutal k-nearest-neighbor graph with increasing nearest-neighbor parameter. We can use this assembly phase in combination with community detection algorithms to find a stable assembly of the graph.
 
@@ -113,19 +112,18 @@ One way this can be done is by tracking the assembly of the network across a ran
 
 The idea is to use congruence between multiple community detection algorithms to track the number of clusters in the network at each value of `k` over the whole range of k-nearest-neighbor parameters possible for the network. You may not need the whole range for datasets with many individuals, as usally the assembly phase completes within the empirical value range (above).
 
-Fortunately, the graph building is usually fast. Essentially you can pipe the list of created graphs into multiple community detection decorators and then into the `plot_kselect` function. Note we are using some random positive distance values, as some community clustering algorithms do not accept negative distances (which should not be the case for genetic distances anyway).
+Fortunately, the graph building is usually fast. Essentially you can pipe the list of graphs into the community detection decorator and then into the `plot_kselect` function. Note we are using some random positive distance values, as some community clustering algorithms do not accept negative distances (which should not be the case for genetic distances anyway).
 
 ```r
 matrix(rnorm(400, mean=1, sd=0.1), nrow=20) %>% 
-  netview(k=1:69) %@%
-  community('walktrap') %@%
-  community('infomap') %@%
-  community('fast_greedy') %>%
+  netview(k=1:19) %@%
+  community(method=c('infomap', 'fast_greedy')) %>%
   plot_kselect()
 ```
 
-> Plots to be inserted here
+This will produce a plot of the number of detected clusters across `k`, which indicates a stable assembly of the graph (a minimum range for the `k` parameter) between `k = 5 - 10`, i.e. the end of the 'elbow' of the plot, after the number of clusters rapidly decreases across both algorithms. Note that the precise outcome of different detection algorithms is not relevant for this approach. You can see that this value range matches the assembly phase at the end of the first row and in the second row in the panel plot above.
 
+<img src='../man/plots/kselect.png' height="400" />
 
 
 ### Admixture plots
