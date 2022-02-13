@@ -56,11 +56,6 @@ Plot the decorated graphs individually or as a panel:
  g %>% plot_netview(nrow=4, ncol=5)   # panel plots
 ```
 
-Here the panel view nicely shows the assembly of the mutal k-nearest-neighbor graph with increasing nearest-neighbor parameter. We can use this assembly phase in combination with community detection algorithms to find a stable assembly of the graph.
-
-<img src='../man/plots/popgraph_panel.png' height="600" />
-
-
 Graph construction from a distance matrix file (symmetrical or triangular, without column or row names) using default plotting without data:
 
 ```r
@@ -91,7 +86,23 @@ For example, note the orientation and location of disconnected clusters in these
 
 ## K-selection plots
 
-...
+We can 'optimise' the k-nearest-neighbor parameter technically (not biologically) - that is select a minimum value at which the network assembly becomes stable and less disjointed. Note that it may still be worth exploring structure and finer scales (lower values) for example to tease apart family pedigrees or explore  
+larger scale relationships between populations (higher values).
+
+> Empirical values for fine scale structures are around `k = 10 - 20`, with `k = 20 - 30` being a good starting point for exploration
+
+One way this can be done is by tracking the assembly of the network across a range of parameter values. Here the panel view from the inference example above nicely shows the assembly of the mutal k-nearest-neighbor graph with increasing nearest-neighbor parameter. We can use this assembly phase in combination with community detection algorithms to find a stable assembly of the graph.
+
+<img src='../man/plots/popgraph_panel.png' height="600" />
+
+The idea is that using multiple community detection algoirthms (three of the most common ones by default) track the number of clusters detected in the network at each value of `k` across the whole range of k-nearest-neighbor parameters possible for the network. You may not need the whole range for datasets with many individuals, as usally the assembly phase completes within the empirical value range.
+
+Fortunately, the graph building is usually fast. Essentially you can pipe the list of created graphs into the community detection decorator and then into the `k_select` function:
+
+```r
+graphs <- matrix(rnorm(4900),nrow=70) %>% netview(k=1:69) 
+community_graphs <- graphs %@ community()
+```
 
 ### Admixture plots
 
