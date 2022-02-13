@@ -71,14 +71,14 @@ netviewr::read_dist("dist.tsv", sep="\t") %>% netviewr::netview(k=20) %>% netvie
 Annotate a graph with data and plot the graph.
 
 ```r
-node_data <- tibble::tibble(x=letters[1:10], y=1:10)        # generate 10 x 2 node data tibble
+node_data <- tibble::tibble(x=letters[1:10], y=1:10)    # generate 10 x 2 node data tibble
 
-g <- igraph::sample_gnm(n=10, m=15) %@%                     # generate random graph with 10 nodes
-     node_data %@%                                          # decorate graph with node data tibble
-     node_color(data='x', palette='BuGn') %@%               # decorate nodes with colors paletted by x
-     node_size(data='y', min=5, max=8)                      # decorate nodes with values rescaled by y
+g <- igraph::sample_gnm(n=10, m=15) %@%                 # generate random graph with 10 nodes
+     node_data %@%                                      # decorate graph with node data tibble
+     node_color(data='x', palette='BuGn') %@%           # decorate nodes with colors paletted by x
+     node_size(data='y', min=5, max=8)                  # decorate nodes with values rescaled by y
      
-g %>% plot_netview()                                        # plot decorated graph from magrittr pipe 
+g %>% plot_netview()                                    # plot decorated graph from magrittr pipe 
 ```
 
 ## Plot examples
