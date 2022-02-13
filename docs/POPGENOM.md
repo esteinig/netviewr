@@ -85,17 +85,17 @@ For example, note the orientation and location of disconnected clusters in these
 Available methods for the community detection decorator function:
 
 ```
-edge_betweenness 	 Community structure detection based on edge betweenness
-fast_greedy  	     Community structure via greedy optimization of modularity
+edge_betweenness 	Community structure detection based on edge betweenness
+fast_greedy 	        Community structure via greedy optimization of modularity
 fluid_communities 	Community detection algorithm based on interacting fluids
-infomap 	          Infomap community finding
-label_prop 	       Finding communities based on propagating labels
-leading_eigen 	    Community structure detecting based on the leading eigenvector of the community matrix
-leiden 	           Finding community structure of a graph using the Leiden algorithm of Traag, van Eck & Waltman.
-louvain 	          Finding community structure by multi-level optimization of modularity
-optimal 	          Optimal community structure
+infomap 	        Infomap community finding
+label_prop 	        Finding communities based on propagating labels
+leading_eigen 	        Community structure detecting based on the leading eigenvector of the community matrix
+leiden 	                Finding community structure of a graph using the Leiden algorithm
+louvain 	        Finding community structure by multi-level optimization of modularity
+optimal 	        Optimal community structure
 spinglass 	        Finding communities in graphs based on statistical meachanics
-walktrap 	         Community strucure via short random walks
+walktrap 	        Community strucure via short random walks
 ```
 
 For more on community clustering and available algorithms see the [`igraph` reference manual](https://igraph.org/r/doc/communities.html).
