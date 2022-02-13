@@ -82,7 +82,23 @@ For example, note the orientation and location of disconnected clusters in these
 
 ## Community detection
 
-...
+Available methods for the community detection decorator function:
+
+```
+edge_betweenness 	 Community structure detection based on edge betweenness
+fast_greedy  	     Community structure via greedy optimization of modularity
+fluid_communities 	Community detection algorithm based on interacting fluids
+infomap 	          Infomap community finding
+label_prop 	       Finding communities based on propagating labels
+leading_eigen 	    Community structure detecting based on the leading eigenvector of the community matrix
+leiden 	           Finding community structure of a graph using the Leiden algorithm of Traag, van Eck & Waltman.
+louvain 	          Finding community structure by multi-level optimization of modularity
+optimal 	          Optimal community structure
+spinglass 	        Finding communities in graphs based on statistical meachanics
+walktrap 	         Community strucure via short random walks
+```
+
+For more on community clustering and available algorithms see the [`igraph` reference manual](https://igraph.org/r/doc/communities.html).
 
 ## K-selection plots
 
@@ -95,14 +111,22 @@ One way this can be done is by tracking the assembly of the network across a ran
 
 <img src='../man/plots/popgraph_panel.png' height="600" />
 
-The idea is that using multiple community detection algoirthms (three of the most common ones by default) track the number of clusters detected in the network at each value of `k` across the whole range of k-nearest-neighbor parameters possible for the network. You may not need the whole range for datasets with many individuals, as usally the assembly phase completes within the empirical value range.
+The idea is to use congruence between multiple community detection algorithms to track the number of clusters in the network at each value of `k` over the whole range of k-nearest-neighbor parameters possible for the network. You may not need the whole range for datasets with many individuals, as usally the assembly phase completes within the empirical value range (above).
 
-Fortunately, the graph building is usually fast. Essentially you can pipe the list of created graphs into the community detection decorator and then into the `k_select` function:
+Fortunately, the graph building is usually fast. Essentially you can pipe the list of created graphs into multiple community detection decorators and then into the `plot_kselect` function. Note we are using some random positive distance values, as some community clustering algorithms do not accept negative distances (which should not be the case for genetic distances anyway).
 
 ```r
-graphs <- matrix(rnorm(4900),nrow=70) %>% netview(k=1:69) 
-community_graphs <- graphs %@ community()
+matrix(rnorm(400, mean=1, sd=0.1), nrow=20) %>% 
+  netview(k=1:69) %@%
+  community('walktrap') %@%
+  community('infomap') %@%
+  community('fast_greedy') %>%
+  plot_kselect()
 ```
+
+> Plots to be inserted here
+
+
 
 ### Admixture plots
 
