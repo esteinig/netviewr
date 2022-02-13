@@ -3,8 +3,7 @@
 \name{graph_decorator}
 \alias{graph_decorator}
 \alias{\%@\%}
-\title{Graph Decorator Operator
-------------------------}
+\title{Graph Decorator Operator}
 \usage{
 g \%@\% f
 }

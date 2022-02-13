@@ -3,11 +3,7 @@
 \name{meta_operator}
 \alias{meta_operator}
 \alias{\%m\%}
-\title{Meta Operator (Column Concatenation Operator)
---------------------------------------------
-Adds a Tibble to the graph attribute `meta` (or concatenates to existing Tibble)
-for use in subsequent graph decorators that might use the data argument to select
-columns from Tibble:}
+\title{Meta Operator (Column Concatenation Operator)}
 \usage{
 t1 \%m\% t2
 }
@@ -20,8 +16,6 @@ t1 \%m\% t2
 Merged data frame by columns of t1 and t2
 }
 \description{
-Meta Operator (Column Concatenation Operator)
---------------------------------------------
 Adds a Tibble to the graph attribute `meta` (or concatenates to existing Tibble)
 for use in subsequent graph decorators that might use the data argument to select
 columns from Tibble:
