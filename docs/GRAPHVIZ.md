@@ -60,11 +60,9 @@ base_graph %@% node_color(data='x', palette='BuGn') %>% plot_netview()
 base_graph %@% node_color(data='x', palette='PuBu') %>% plot_netview()
 ```
 
-Legends and titles can be set using the `legend` and `text` arguments. `Legend` parameter is character that selects a coumn from attached node data when `%@%` is used (see above)
+Legends and titles can be set using the `legend` and `text` arguments. `Legend` parameter is character that selects a column from attached node data when `%@%` is used (see above)
 
 ```r
 graphs %>% plot_netview(legend='x', text="Test", text_size=1.5)
 ```
-
-If either `ncol` or `nrow` are set, the function expects a list of graphs, which is then translated into a panel view currently with a maximum of up to four plots (e.g. `ncol = 2` and `nrow = 2`).
 
