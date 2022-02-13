@@ -65,3 +65,8 @@
   if (igraph::is.igraph(g)) op(g, f) else sapply(g, op, f=f, simplify = FALSE, USE.NAMES = TRUE)
 
 }
+
+#' Magrittr Pipe
+#' @importFrom magrittr %>%
+#' @export
+magrittr::`%>%`
