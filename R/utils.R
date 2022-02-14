@@ -112,29 +112,3 @@ plot_kselect <- function(graphs){
   return(p)
 
 }
-
-#' Matrix Reader
-#'@param file       char: file path to matrix - no header, no rownames
-#'@param diag       bool: whether dist matrix is diagonal only
-#'@param names      vec: vector of row and column names
-#'@param ...        any other parameter passed to `scan` function to read file
-#'@export
-read_dist <- read_triangular <- function(file="", diag=FALSE, names=paste("X", 1:n, sep=""), ...) {
-
-  ## The following is slightly modified from sem:::read.moments, which is
-  ## Copyright 2007 John Fox and is licensed under the GPL V2+
-
-  elements <- scan(file = file, quiet=TRUE, ...)
-  m <- length(elements)
-  d <- if (diag) 1 else -1
-  n <- floor((sqrt(1 + 8 * m) - d) / 2)
-  if (m != n * (n + d) / 2) stop("wrong number of elements")
-  if (length(names) != n)   stop("wrong number of variable names")
-  X <- diag(n)
-  X[upper.tri(X, diag=diag)] <- elements
-  rownames(X) <- colnames(X) <- names
-  X <- X + t(X)
-  diag(X) <- diag(X) / 2
-  if (!diag) diag(X) <- rep(0, length(diag(X)))
-  return(X)
-}
