@@ -56,16 +56,16 @@ Plot the decorated graphs individually or as a panel:
  g %>% plot_netview(nrow=4, ncol=5)   # panel plots
 ```
 
-Graph construction from a distance matrix file (symmetrical or triangular, without column or row names) using default plotting without data:
+Graph construction from a distance matrix file (symmetrical without column or row names) using default plotting without data decoration:
 
 ```r
-read_dist("dist.tsv", sep="\t") %>% netview(k=20) %>% plot_netview()
+as.matrix(read.csv("dist.tsv", sep="\t", header=F)) %>% netview(k=20) %>% plot_netview()
 ```
 
 Of course this pipeline also works without piping:
 
 ```r
-dist_matrix <- read_dist("dist.tsv", sep="\t")
+dist_matrix <- as.matrix(read.csv("dist.tsv", sep="\t", header=F))
 g <- netview(dist_matrix, k=20)
 plot_netview(g)
 ```
