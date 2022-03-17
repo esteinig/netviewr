@@ -70,8 +70,8 @@ Base syntax is also supported.
 
 ```r
 dist_matrix <- matrix(rnorm(600), nrow=30)
-g <- netview(dist_matrix, k=20)
-plot_netview(g)
+g <- netviewr::netview(dist_matrix, k=20)
+netviewr::plot_netview(g)
 ```
 
 ## General graph example
