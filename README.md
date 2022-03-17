@@ -66,6 +66,14 @@ Build and plot a mutual k-nearest-neighbor graph from a (genetic) distance matri
 matrix(rnorm(600), nrow=30) %>% netviewr::netview(k=20) %>% netviewr::plot_netview()
 ```
 
+Also works in base syntax.
+
+```r
+dist_matrix <- matrix(rnorm(600), nrow=30)
+g <- netview(dist_matrix, k=20)
+plot_netview(g)
+```
+
 ## General graph example
 
 Annotate a graph with data and plot the graph.
