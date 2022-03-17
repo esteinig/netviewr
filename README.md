@@ -15,7 +15,8 @@ working with data-driven plots of `igraph` objects more pleasant by:
 
 `Netviewr` is built with its original application in mind, which is the visualization of genetic population structure and associated meta data from genome-wide single nucleotide polymorphisms (SNPs) for both eukaryotic and prokaryotic species. While it is not a suitable package for __determining__ population structure, it can be used to effectively __visualize__ data (traits, phenotypes, genotypes...) across population structures; it should be used in conjunction with other statistically more sophisticated tools like DAPC or Admixture. 
 
-> Netviewr implements the same tasks and methods as the published version of NetView - except in modern R. If you are feeling uncomfortable with the new syntax, or need backward compatibility, the [old version](https://github.com/esteinig/netview/blob/master/README_OLD.md) is still accessible.
+> Netviewr implements the same tasks and methods as the published version of NetView - except in modern R. If the new syntax feels weird, or you need backward compatibility, the [old version](https://github.com/esteinig/netview/blob/master/README_OLD.md) is still accessible. You can also use all functions in base syntax (without pipes) as shown in the [population graphs](docs/POPGENOM.md#population-graphs) examples.
+
 ## Citation
 
 If you are using `netviewr` for research applications, for now please cite:
