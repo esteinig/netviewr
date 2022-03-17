@@ -79,6 +79,8 @@ netviewr::plot_netview(g)
 Annotate a graph with data and plot the graph.
 
 ```r
+library(netviewr)
+
 node_data <- tibble::tibble(x=letters[1:10], y=1:10)    # generate 10 x 2 node data tibble
 
 g <- igraph::sample_gnm(n=10, m=15) %@%                 # generate random graph with 10 nodes
