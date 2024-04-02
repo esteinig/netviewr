@@ -63,13 +63,13 @@ devtools::install_github("esteinig/netviewr")
 Build and plot a mutual k-nearest-neighbor graph from a (genetic) distance matrix.
 
 ```r
-matrix(rnorm(600), nrow=30) %>% netviewr::netview(k=20) %>% netviewr::plot_netview()
+matrix(rnorm(900), nrow=30) %>% netviewr::netview(k=20) %>% netviewr::plot_netview()
 ```
 
 Base syntax is also supported.
 
 ```r
-dist_matrix <- matrix(rnorm(600), nrow=30)
+dist_matrix <- matrix(rnorm(900), nrow=30)
 g <- netviewr::netview(dist_matrix, k=20)
 netviewr::plot_netview(g)
 ```
