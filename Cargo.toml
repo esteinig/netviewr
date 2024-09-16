@@ -1,0 +1,41 @@
+[package]
+rust-version = "1.76"
+name = "netview"
+version = "0.1.0"
+authors = ["esteinig <eike.steinig@unimelb.edu.au>"]
+description = "Netview: k mutual nearest neighbor graphs for genome-wide, fine-scale population structure determination and visualization"
+documentation = "https://github.com/esteinig/netviewr"
+homepage = "https://github.com/esteinig/netviewr"
+repository = "https://github.com/esteinig/netviewr"
+readme = "README.md"
+keywords = ["netview", "mutual nearest neighbor graphs", "genetic population structure and admitxure", "graph clustering", "fine-scale structure"]
+categories = ["science"]
+license = "MIT"
+edition = "2021"
+include = [
+    "**/*.rs",
+    "src/data/*",
+    "Cargo.toml"
+]
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.3.23", features = ["derive", "env", "unstable-styles", "wrap_help"] }
+tabled = { version = "0.5.0", features = ["ansi-str", "color"] }
+thiserror = "1.0"
+crossterm = "0.23.0"
+itertools = "0.10.3"
+anstyle = "1.0.6"
+log = "0.4.21"
+env_logger = "0.10.0"
+niffler = "2.5.0"
+serde = { version = "1.0.197", features = ["derive"] }
+rayon = "1.10.0"
+csv = "1.3.0"
+tempfile = "3.10.1"
+petgraph = { version = "0.6.4", features = ["serde", "serde_derive"] }
+serde_json = "1.0.115"
+
+[[bin]]
+name = "netview"
+path = "src/main.rs"
