@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand};
 
-/// Vircov: metagenomic diagnostics for viral genomes
+use crate::mknn::GraphFormat;
+
+/// Netview
 #[derive(Debug, Parser)]
 #[command(author, version, about)]
 #[command(styles=get_styles())]
@@ -34,8 +36,8 @@ pub struct GraphArgs {
     #[clap(long, short = 'o', default_value="graph.tsv")]
     pub output: PathBuf,
     /// Output format for graph
-    #[clap(long, short = 'f', default_value="adjacency", )]
-    pub output_format: String,
+    #[clap(long, short = 'f', default_value="adjacency")]
+    pub output_format: GraphFormat,
 }
 
 

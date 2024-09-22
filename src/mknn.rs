@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use petgraph::{dot::Dot, Graph, Undirected};
 use csv::WriterBuilder;
 use serde_json;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Write, path::Path};
 use petgraph::visit::EdgeRef;
 use core::f64::NAN;
@@ -170,6 +170,15 @@ pub fn convert_to_graph(mutual_nearest_neighbors: &Vec<Vec<usize>>, distance_mat
 }
 
 
+#[derive(Serialize, Deserialize, Clone, Debug, clap::ValueEnum)]
+pub enum GraphFormat {
+    Dot,
+    Json,
+    Adjacency,
+}
+
+
+
 /// Writes a `petgraph::Graph` to a file in specified formats (DOT or JSON).
 ///
 /// This function supports exporting the graph to various formats for visualization
@@ -201,12 +210,10 @@ pub fn convert_to_graph(mutual_nearest_neighbors: &Vec<Vec<usize>>, distance_mat
 /// write_graph_to_file(&graph, Path::new("graph.json"), "json").unwrap();
 /// write_graph_to_file(&graph, Path::new("graph.tsv"), "adjmatrix").unwrap();
 /// ```
-
-
 pub fn write_graph_to_file<N, E>(
     graph: &Graph<N, E, Undirected>,
     path: &Path,
-    format: &str,
+    format: &GraphFormat,
 ) -> Result<(), NetviewError>
 where
     N: Serialize + std::fmt::Debug,
@@ -215,15 +222,15 @@ where
     let mut file = File::create(path).map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
 
     match format {
-        "dot" => {
+        GraphFormat::Dot => {
             let dot = Dot::with_config(graph, &[petgraph::dot::Config::EdgeNoLabel]);
             write!(file, "{:?}", dot).map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
         },
-        "json" => {
+        GraphFormat::Json => {
             let adj_matrix = graph_to_adjacency_matrix(graph, false)?;
             serde_json::to_writer(&file, &adj_matrix).map_err(|e| NetviewError::GraphSerializationError(e.to_string()))?;
         },
-        "adjacency" => {
+        GraphFormat::Adjacency => {
             let adj_matrix = graph_to_adjacency_matrix(graph, false)?;
             write_adjacency_matrix_to_file(&adj_matrix, path)?;
             
