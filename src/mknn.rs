@@ -1,5 +1,4 @@
 use rayon::prelude::*;
-use std::cmp::Ordering;
 use petgraph::{dot::Dot, Graph, Undirected};
 use csv::WriterBuilder;
 use serde_json;
@@ -14,27 +13,27 @@ use crate::dist::make_symmetrical;
 use crate::error::NetviewError;
 
 /// Helper struct for managing neighbors during sorting.
-struct ReverseNeighbor(f64, usize);
+// struct ReverseNeighbor(f64, usize);
 
-impl Ord for ReverseNeighbor {
-    fn cmp(&self, other: &Self) -> Ordering {
-        other.0.partial_cmp(&self.0).unwrap_or(Ordering::Equal)
-    }
-}
+// impl Ord for ReverseNeighbor {
+//     fn cmp(&self, other: &Self) -> Ordering {
+//         other.0.partial_cmp(&self.0).unwrap_or(Ordering::Equal)
+//     }
+// }
 
-impl PartialOrd for ReverseNeighbor {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
+// impl PartialOrd for ReverseNeighbor {
+//     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+//         Some(self.cmp(other))
+//     }
+// }
 
-impl PartialEq for ReverseNeighbor {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
+// impl PartialEq for ReverseNeighbor {
+//     fn eq(&self, other: &Self) -> bool {
+//         self.0 == other.0
+//     }
+// }
 
-impl Eq for ReverseNeighbor {}
+// impl Eq for ReverseNeighbor {}
 
 /// Calculates the k-mutual nearest neighbors from a distance matrix.
 ///
@@ -232,10 +231,8 @@ where
         },
         GraphFormat::Adjacency => {
             let adj_matrix = graph_to_adjacency_matrix(graph, false)?;
-            write_adjacency_matrix_to_file(&adj_matrix, path)?;
-            
-        },
-        _ => return Err(NetviewError::GraphSerializationError("Unsupported format".to_string())),
+            write_adjacency_matrix_to_file(&adj_matrix, path)?;   
+        }
     }
 
     Ok(())
