@@ -3,3 +3,4 @@ pub mod error;
 pub mod mknn;
 pub mod terminal;
 pub mod log;
+pub mod netview;

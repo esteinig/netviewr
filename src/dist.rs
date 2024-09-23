@@ -44,14 +44,9 @@ struct MatrixRow(Vec<f64>);
 /// 
 /// println!("{:#?}", distance_matrix);
 /// ```
-pub fn parse_distance_matrix<P: AsRef<Path>>(file_path: P) -> Result<Vec<Vec<f64>>, NetviewError> {
+pub fn parse_input_matrix<P: AsRef<Path>>(file_path: P, is_tsv: bool) -> Result<Vec<Vec<f64>>, NetviewError> {
 
     let file = File::open(file_path.as_ref()).map_err(|_| NetviewError::FileReadError)?;
-    let is_tsv = file_path.as_ref().extension()
-        .and_then(|ext| ext.to_str())
-        .map_or(false, |ext| ext.eq_ignore_ascii_case("tsv"));
-    
-    log::info!("Input matrix is tab-delimited: {is_tsv}");
 
     let mut rdr = ReaderBuilder::new()
         .delimiter(if is_tsv { b'\t' } else { b',' })
@@ -420,21 +415,21 @@ mod tests {
     #[test]
     fn parse_symmetrical_csv() {
         let path = create_temp_matrix_file("0,1\n1,0", "csv");
-        let matrix = parse_distance_matrix(path).unwrap();
+        let matrix = parse_input_matrix(path, true).unwrap();
         assert_eq!(matrix, vec![vec![0.0, 1.0], vec![1.0, 0.0]]);
     }
 
     #[test]
     fn parse_lower_triangular_tsv() {
         let path = create_temp_matrix_file("0\n1\t0", "tsv");
-        let matrix = parse_distance_matrix(path).unwrap();
+        let matrix = parse_input_matrix(path, true).unwrap();
         assert_eq!(matrix, vec![vec![0.0], vec![1.0, 0.0]]);
     }
 
     #[test]
     fn empty_file_error() {
         let path = create_temp_matrix_file("", "csv");
-        let result = parse_distance_matrix(path);
+        let result = parse_input_matrix(path, false);
         assert!(matches!(result, Err(NetviewError::MatrixFormatError)));
     }
 
@@ -442,35 +437,35 @@ mod tests {
     fn invalid_format_error() {
         // More columns than rows - invalid matrix
         let path = create_temp_matrix_file("0,1,2\n1,0", "csv");
-        let result = parse_distance_matrix(path);
+        let result = parse_input_matrix(path, false);
         assert!(matches!(result, Err(NetviewError::MatrixFormatError)));
     }
 
     #[test]
     fn non_numeric_values_error() {
         let path = create_temp_matrix_file("0,a\nb,0", "csv");
-        let result = parse_distance_matrix(path);
+        let result = parse_input_matrix(path, false);
         assert!(matches!(result, Err(NetviewError::ParseError(_))));
     }
 
     #[test]
     fn file_not_found_error() {
         let path = PathBuf::from("non_existent_file.csv");
-        let result = parse_distance_matrix(path);
+        let result = parse_input_matrix(path, true);
         assert!(matches!(result, Err(NetviewError::FileReadError)));
     }
 
     #[test]
     fn parse_symmetrical_with_additional_whitespaces_csv() {
         let path = create_temp_matrix_file("0 , 1\n 1,0 ", "csv");
-        let matrix = parse_distance_matrix(path).unwrap();
+        let matrix = parse_input_matrix(path, false).unwrap();
         assert_eq!(matrix, vec![vec![0.0, 1.0], vec![1.0, 0.0]]);
     }
 
     #[test]
     fn inconsistent_row_lengths_error() {
         let path = create_temp_matrix_file("0,1,2\n1,0", "csv");
-        let result = parse_distance_matrix(path);
+        let result = parse_input_matrix(path, false);
         assert!(matches!(result, Err(NetviewError::MatrixFormatError)));
     }
 
@@ -478,7 +473,7 @@ mod tests {
     fn large_symmetrical_csv() {
         // Creates a 3x3 matrix
         let path = create_temp_matrix_file("0,1,2\n1,0,3\n2,3,0", "csv");
-        let matrix = parse_distance_matrix(path).unwrap();
+        let matrix = parse_input_matrix(path, false).unwrap();
         assert_eq!(matrix, vec![vec![0.0, 1.0, 2.0], vec![1.0, 0.0, 3.0], vec![2.0, 3.0, 0.0]]);
     }
 
@@ -486,7 +481,7 @@ mod tests {
     fn valid_tsv_with_mixed_delimiters_error() {
         // Uses both comma and tab as delimiters, which should result in an error
         let path = create_temp_matrix_file("0\t1\n1,0", "tsv");
-        let result = parse_distance_matrix(path);
+        let result = parse_input_matrix(path, false);
         // Expected to fail due to inconsistent delimiters within a TSV file
         assert!(matches!(result, Err(NetviewError::MatrixFormatError)));
     }

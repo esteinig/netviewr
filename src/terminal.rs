@@ -16,8 +16,8 @@ pub struct App {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// K mutual nearest neighbor graph computation from a distance matrix
-    Graph(GraphArgs),
+    /// Mutual nearest neighbor graph computation from a distance matrix
+    Graph(GraphArgs)
 }
 
 
@@ -29,6 +29,9 @@ pub struct GraphArgs {
     /// K parameter for mutual nearest neighbor algorithm
     #[clap(long = "mutual-nearest-neighbors", short = 'k', default_value = "20")]
     pub k: usize,
+    /// Distance matrix for graph computation
+    #[clap(long, short = 'a', required = false)]
+    pub af_matrix: Option<PathBuf>,
     /// Include distances as edge weights in the graph
     #[clap(long, short = 'w')]
     pub weights: bool,
@@ -36,10 +39,9 @@ pub struct GraphArgs {
     #[clap(long, short = 'o', default_value="graph.tsv")]
     pub output: PathBuf,
     /// Output format for graph
-    #[clap(long, short = 'f', default_value="adjacency")]
+    #[clap(long, short = 'f', default_value="edges")]
     pub output_format: GraphFormat,
 }
-
 
 pub fn get_styles() -> clap::builder::Styles {
 	clap::builder::Styles::styled()

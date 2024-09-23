@@ -30,10 +30,14 @@ pub enum NetviewError {
     GraphFileError(String),
     #[error("Error serializing the graph: {0}")]
     GraphSerializationError(String),
+    #[error("Error deserializing the graph: {0}")]
+    GraphDeserializationError(String),
     #[error("Error writing to file: {0}")]
     WriteError(String),
     #[error("CSV serialization error: {0}")]
     CsvError(#[from] csv::Error),
+    #[error("IO error: {0}")]
+    IoError(#[from] std::io::Error),
     #[error("Error retrieving NodeIndex during graph construction")]
     NodeIndexError,
 }

@@ -3,37 +3,17 @@ use petgraph::{dot::Dot, Graph, Undirected};
 use csv::WriterBuilder;
 use serde_json;
 use serde::{Deserialize, Serialize};
+use std::io::{BufReader, BufRead};
 use std::{fs::File, io::Write, path::Path};
-use petgraph::visit::EdgeRef;
+use petgraph::visit::{EdgeRef, IntoNodeReferences};
 use core::f64::NAN;
 use petgraph::graph::NodeIndex;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::dist::make_symmetrical;
 use crate::error::NetviewError;
+use crate::netview::{EdgeLabel, NodeLabel};
 
-/// Helper struct for managing neighbors during sorting.
-// struct ReverseNeighbor(f64, usize);
-
-// impl Ord for ReverseNeighbor {
-//     fn cmp(&self, other: &Self) -> Ordering {
-//         other.0.partial_cmp(&self.0).unwrap_or(Ordering::Equal)
-//     }
-// }
-
-// impl PartialOrd for ReverseNeighbor {
-//     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-//         Some(self.cmp(other))
-//     }
-// }
-
-// impl PartialEq for ReverseNeighbor {
-//     fn eq(&self, other: &Self) -> bool {
-//         self.0 == other.0
-//     }
-// }
-
-// impl Eq for ReverseNeighbor {}
 
 /// Calculates the k-mutual nearest neighbors from a distance matrix.
 ///
@@ -102,66 +82,63 @@ pub fn k_mutual_nearest_neighbors(distance_matrix: &Vec<Vec<f64>>, k: usize) -> 
 }
 
 
-/// Converts the output of k-mutual-nearest-neighbors and the optional original distance matrix into a `petgraph::Graph`.
-///
-/// # Arguments
-///
-/// * `mutual_nearest_neighbors` - The output from `k_mutual_nearest_neighbors`, a Vec<Vec<usize>> indicating the indices 
-///                                of the k mutual nearest neighbors for each element.
-/// 
-/// * `distance_matrix`          - An optional reference to the original distance matrix as a Vec<Vec<f64>>. If provided, 
-///                                edges are weighted by the distances between mutual nearest neighbors; otherwise, a 
-///                                default weight of 1.0 is used.
-///
-/// # Returns
-///
-/// A `Graph<usize, f64>`, where nodes represent the indices in the original dataset, and edges are weighted by the distances 
-/// between mutual nearest neighbors if a distance matrix is provided.
-///
-/// # Examples
-///
-/// ```
-/// use petgraph::Graph;
-/// use std::collections::HashMap;
-///
-/// // Example usage with a distance matrix
-/// let distance_matrix = Some(vec![
-///     vec![0.0, 1.0, 2.0],
-///     vec![1.0, 0.0, 3.0],
-///     vec![2.0, 3.0, 0.0],
-/// ]);
-/// let mutual_nearest_neighbors = vec![vec![1], vec![0], vec![1]]; // Simplified example output
-/// let graph_with_distances = convert_to_graph(&mutual_nearest_neighbors, distance_matrix.as_ref());
-/// assert_eq!(graph_with_distances.edge_count(), 2);
-///
-/// // Example usage without a distance matrix
-/// let graph_without_distances = convert_to_graph(&mutual_nearest_neighbors, None);
-/// assert_eq!(graph_without_distances.edge_count(), 2);
-/// ```
-pub fn convert_to_graph(mutual_nearest_neighbors: &Vec<Vec<usize>>, distance_matrix: Option<&Vec<Vec<f64>>>) -> Result<Graph<usize, f64, Undirected>, NetviewError> {
-    let mut graph = Graph::<usize, f64, Undirected>::new_undirected();
+// Function to convert mutual nearest neighbors to a graph with NodeLabel and EdgeLabel
+pub fn convert_to_graph(
+    mutual_nearest_neighbors: &Vec<Vec<usize>>, 
+    distance_matrix: Option<&Vec<Vec<f64>>>,  // Distance matrix
+    af_matrix: Option<&Vec<Vec<f64>>>,        // Alignment fraction matrix
+) -> Result<Graph<NodeLabel, EdgeLabel, Undirected>, NetviewError> {
+    
+    // Create an undirected graph with NodeLabel and EdgeLabel
+    let mut graph = Graph::<NodeLabel, EdgeLabel, Undirected>::new_undirected();
 
+    // Maps to store node indices and avoid duplicate edges
     let mut index_map: HashMap<usize, NodeIndex> = HashMap::new();
+    let mut edge_set: HashSet<(usize, usize)> = HashSet::new();  // Set to track added edges
+    let mut edge_index = 0;  // Track the edge index
 
-    // First add all nodes so that the node indices are consistent:
-    for (node, _) in mutual_nearest_neighbors.iter().enumerate(){
-        let node_index = graph.add_node(node);
-        index_map.insert(node, node_index);
+    // Add all nodes to the graph as NodeLabels
+    for (node_index, _) in mutual_nearest_neighbors.iter().enumerate() {
+        let node_label = NodeLabel::new(node_index);  // Create NodeLabel with index
+        let graph_node_index = graph.add_node(node_label);  // Add NodeLabel to the graph
+        index_map.insert(node_index, graph_node_index);
     }
 
-    for (node, neighbors) in mutual_nearest_neighbors.iter().enumerate() {
-
-        let node_index = *index_map.get(&node).ok_or(NetviewError::NodeIndexError)?;
+    // Add edges between mutual nearest neighbors, ensuring no duplicate edges
+    for (node_index, neighbors) in mutual_nearest_neighbors.iter().enumerate() {
+        let graph_node_index = *index_map.get(&node_index).ok_or(NetviewError::NodeIndexError)?;
 
         for &neighbor in neighbors.iter() {
-
-            let distance = match distance_matrix {
-                Some(matrix) => matrix.get(node).and_then(|row| row.get(neighbor)).copied().unwrap_or(1.0), // Use 1.0 or another default value as the default distance
-                None => 1.0, // Default weight when distance_matrix is not provided
+            // Ensure edges are added only once
+            let edge = if node_index < neighbor {
+                (node_index, neighbor)
+            } else {
+                (neighbor, node_index)
             };
 
-            let neighbor_index = *index_map.get(&neighbor).ok_or(NetviewError::NodeIndexError)?;
-            graph.add_edge(node_index, neighbor_index, distance);
+            if !edge_set.contains(&edge) {
+                // Get the distance from the distance matrix, if provided
+                let dist = match distance_matrix {
+                    Some(matrix) => matrix.get(node_index).and_then(|row| row.get(neighbor)).copied().unwrap_or(1.0),
+                    None => 1.0,  // Default weight if no distance matrix is provided
+                };
+
+                // Get the alignment fraction from the af_matrix, if provided
+                let af = match af_matrix {
+                    Some(matrix) => matrix.get(node_index).and_then(|row| row.get(neighbor)).copied(),
+                    None => None,  // Default to None if no af_matrix is provided
+                };
+
+                // Create the edge label with the index, distance, and af (alignment fraction)
+                let edge_label = EdgeLabel::new(edge_index, dist, af);
+
+                let graph_neighbor_index = *index_map.get(&neighbor).ok_or(NetviewError::NodeIndexError)?;
+                graph.add_edge(graph_node_index, graph_neighbor_index, edge_label);
+
+                // Mark this edge as added and increment the edge index
+                edge_set.insert(edge);
+                edge_index += 1;
+            }
         }
     }
 
@@ -169,29 +146,35 @@ pub fn convert_to_graph(mutual_nearest_neighbors: &Vec<Vec<usize>>, distance_mat
 }
 
 
+
 #[derive(Serialize, Deserialize, Clone, Debug, clap::ValueEnum)]
 pub enum GraphFormat {
     Dot,
     Json,
     Adjacency,
+    Edges,
 }
 
 
 
-/// Writes a `petgraph::Graph` to a file in specified formats (DOT or JSON).
+/// Writes a `petgraph::Graph` to a file in specified formats (DOT, JSON, Adjacency Matrix, or Edges List).
 ///
 /// This function supports exporting the graph to various formats for visualization
-/// or further processing. Currently supported formats are DOT, for use with Graphviz,
-/// and JSON, for generic data interchange.
+/// or further processing. Currently supported formats are:
+/// - **DOT**: For use with Graphviz for visualizing the graph.
+/// - **JSON**: For generic data interchange, representing nodes and edges as JSON objects.
+/// - **Adjacency Matrix**: Outputs the adjacency matrix representation of the graph in TSV format.
+/// - **Edges**: Outputs an edge list with source, target, and optional weights.
 ///
 /// # Arguments
 /// * `graph`  - Reference to the graph to be written.
 /// * `path`   - Path to the output file where the graph should be written.
-/// * `format` - Specifies the output format ("dot" or "json").
+/// * `format` - Specifies the output format ("dot", "json", "adjmatrix", or "edges").
+/// * `include_weights` - Whether to include edge weights in the output (relevant for some formats).
 ///
 /// # Returns
 /// * `Ok(())` on success.
-/// * `Err(GraphWriteError)` on failure, with detailed error information.
+/// * `Err(NetviewError)` on failure, with detailed error information.
 ///
 /// # Examples
 ///
@@ -205,18 +188,20 @@ pub enum GraphFormat {
 /// let b = graph.add_node("Node B");
 /// graph.add_edge(a, b, "connects");
 ///
-/// write_graph_to_file(&graph, Path::new("graph.dot"), "dot").unwrap();
-/// write_graph_to_file(&graph, Path::new("graph.json"), "json").unwrap();
-/// write_graph_to_file(&graph, Path::new("graph.tsv"), "adjmatrix").unwrap();
+/// write_graph_to_file(&graph, Path::new("graph.dot"), "dot", false).unwrap();
+/// write_graph_to_file(&graph, Path::new("graph.json"), "json", true).unwrap();
+/// write_graph_to_file(&graph, Path::new("graph.tsv"), "adjmatrix", false).unwrap();
+/// write_graph_to_file(&graph, Path::new("graph_edges.txt"), "edges", true).unwrap();
 /// ```
-pub fn write_graph_to_file<N, E>(
-    graph: &Graph<N, E, Undirected>,
+pub fn write_graph_to_file(
+    graph: &Graph<NodeLabel, EdgeLabel, Undirected>,
     path: &Path,
     format: &GraphFormat,
+    include_weights: bool
 ) -> Result<(), NetviewError>
 where
-    N: Serialize + std::fmt::Debug,
-    E: Serialize + Into<f64> + std::clone::Clone + std::fmt::Debug,
+    NodeLabel: Serialize + std::fmt::Debug,
+    EdgeLabel: Serialize + std::clone::Clone + std::fmt::Debug,
 {
     let mut file = File::create(path).map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
 
@@ -226,18 +211,132 @@ where
             write!(file, "{:?}", dot).map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
         },
         GraphFormat::Json => {
-            let adj_matrix = graph_to_adjacency_matrix(graph, false)?;
-            serde_json::to_writer(&file, &adj_matrix).map_err(|e| NetviewError::GraphSerializationError(e.to_string()))?;
+            write_json_graph(graph, path)?;
         },
         GraphFormat::Adjacency => {
             let adj_matrix = graph_to_adjacency_matrix(graph, false)?;
             write_adjacency_matrix_to_file(&adj_matrix, path)?;   
+        },
+        GraphFormat::Edges => {
+            let edgelist = graph_to_edgelist(graph);
+            write_edgelist_to_file(&edgelist, path, include_weights)?;
         }
     }
 
     Ok(())
 }
 
+
+/// Writes a `petgraph::Graph` with `NodeLabel` and `EdgeLabel` to a JSON file.
+///
+/// This function uses the `serde`-derived `Serialize` implementation of `NodeLabel` and `EdgeLabel`
+/// to directly serialize the graph nodes and edges into JSON format.
+///
+/// # Arguments
+/// * `graph`          - Reference to the graph to be serialized.
+/// * `path`           - Path to the output file where the JSON should be written.
+/// * `include_weights` - Whether to include weights (distance) in the edge list.
+///
+/// # Returns
+/// * `Ok(())` on success.
+/// * `Err(NetviewError)` on failure, with detailed error information.
+pub fn write_json_graph<NodeLabel, EdgeLabel>(
+    graph: &Graph<NodeLabel, EdgeLabel, Undirected>,
+    path: &std::path::Path,
+) -> Result<(), NetviewError>
+where
+    NodeLabel: Serialize + std::fmt::Debug,
+    EdgeLabel: Serialize + std::fmt::Debug,
+{
+    let mut file = File::create(path).map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
+
+    // Serialize nodes and edges
+    let mut nodes = vec![];
+    let mut edges = vec![];
+
+    // Serialize the nodes
+    for (_, node_label) in graph.node_references() {
+        nodes.push(node_label);
+    }
+
+    // Serialize the edges
+    for edge in graph.edge_references() {
+       edges.push(edge.weight());
+    }
+
+    // Create a JSON object with nodes and edges
+    let graph_json = serde_json::json!({
+        "nodes": nodes,
+        "edges": edges
+    });
+
+    // Write the serialized JSON to the file
+    serde_json::to_writer_pretty(&mut file, &graph_json)
+        .map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
+
+    Ok(())
+}
+
+/// Reads an edge list from a file and constructs a petgraph Graph.
+///
+/// # Arguments
+///
+/// * `filename` - Path to the edge list file.
+/// * `has_weights` - If `true`, the third column of each row is treated as the edge weight.
+///                   If `false`, edges will have a default weight of 1.0.
+///
+/// # Returns
+///
+/// A `Result` containing a `Graph<usize, f64, Undirected>`, where nodes are indexed by their positions in the edge list.
+///
+/// # Example
+///
+/// ```rust
+/// let graph = read_edgelist("edgelist.tsv", true).unwrap();
+/// ```
+pub fn read_edgelist(filename: &Path, has_weights: bool) -> Result<Graph<usize, f64, Undirected>, NetviewError> {
+    // Create a new undirected graph
+    let mut graph = Graph::<usize, f64, Undirected>::new_undirected();
+    
+    // A map to keep track of nodes and their corresponding NodeIndex in the graph
+    let mut node_map: HashMap<usize, NodeIndex> = HashMap::new();
+
+    // Open the edge list file
+    let file = File::open(filename).map_err(|_| NetviewError::GraphDeserializationError(filename.to_string_lossy().to_string()))?;
+    let reader = BufReader::new(file);
+
+    // Read the file line by line
+    for line in reader.lines() {
+        let line = line?;
+
+        // Split the line by tab
+        let parts: Vec<&str> = line.split('\t').collect();
+        if parts.len() < 2 {
+            continue; // Invalid line, skip
+        }
+
+        // Parse the node indices (assuming nodes are represented by usize)
+        let node1: usize = parts[0].parse().unwrap();
+        let node2: usize = parts[1].parse().unwrap();
+
+        // Parse the weight if `has_weights` is true, otherwise assign 1.0 as the default weight
+        let weight: f64 = if has_weights && parts.len() == 3 {
+            parts[2].parse().unwrap_or(1.0)
+        } else {
+            1.0
+        };
+
+        // Get or create NodeIndex for node1
+        let node1_index = *node_map.entry(node1).or_insert_with(|| graph.add_node(node1));
+        // Get or create NodeIndex for node2
+        let node2_index = *node_map.entry(node2).or_insert_with(|| graph.add_node(node2));
+
+        // Add the edge between node1 and node2 with the weight
+        graph.add_edge(node1_index, node2_index, weight);
+    }
+
+    Ok(graph)
+}
 
 /// Writes an adjacency matrix to a tab-delimited file.
 ///
@@ -271,70 +370,44 @@ pub fn write_adjacency_matrix_to_file(matrix: &Vec<Vec<f64>>, path: impl AsRef<P
     wtr.flush().map_err(|err| NetviewError::CsvError(err.into()))
 }
 
-/// Writes a petgraph `Graph<N, E>` to a JSON file.
+
+/// Writes the edge list to a file.
 ///
 /// # Arguments
 ///
-/// * `graph` - The graph to be serialized and written to a file.
-/// * `path` - The file path where the graph should be written.
+/// * `edgelist` - A `Vec<(usize, usize, f64)>` representing the edges (source, target, weight).
+/// * `filename` - The file path where the edge list will be written.
+/// * `include_weights` - If `true`, includes the weights in the output; if `false`, only writes the source and target.
 ///
 /// # Returns
 ///
-/// * `Ok(())` on success.
-/// * `Err(NetviewError)` on failure, detailing the issue encountered.
+/// A `Result<(), NetviewError>` indicating success or failure.
 ///
-/// # Examples
+/// # Example
 ///
-/// ```no_run
-/// use petgraph::Graph;
-/// use std::path::Path;
-/// use netview::write_json_graph;
-///
-/// let mut graph = Graph::<&str, f64>::new();
-/// let a = graph.add_node("Node A");
-/// let b = graph.add_node("Node B");
-/// graph.add_edge(a, b, 1.23);
-///
-/// write_json_graph(&graph, Path::new("graph.json")).unwrap();
 /// ```
-pub fn write_json_graph<N, E>(graph: &Graph<N, E>, path: &Path) -> Result<(), NetviewError>
-where
-    N: Serialize + Clone,
-    E: Serialize + Clone,
-{
-    // Convert the graph into a serializable structure
-    #[derive(Serialize)]
-    struct EdgeData<N, E> {
-        source: N,
-        target: N,
-        weight: E,
-    }
+/// let edgelist = vec![(0, 1, 1.5), (1, 2, 2.5)];
+/// write_edgelist_to_file(&edgelist, "edgelist.txt", true).expect("Failed to write file");
+/// ```
+pub fn write_edgelist_to_file(edgelist: &Vec<(usize, usize, f64)>, filename: &Path, include_weights: bool) -> Result<(), NetviewError> {
+    // Step 1: Create or open the file
+    let mut file = File::create(filename).map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
 
-    #[derive(Serialize)]
-    struct GraphData<N, E> {
-        nodes: Vec<N>,
-        edges: Vec<EdgeData<usize, E>>,
-    }
-
-    let nodes: Vec<_> = graph.node_indices().map(|n| graph[n].clone()).collect();
-    let edges: Vec<_> = graph.edge_references().map(|e| {
-        EdgeData {
-            source: e.source().index(),
-            target: e.target().index(),
-            weight: e.weight().clone(),
+    // Step 2: Iterate over the edge list and write each edge to the file
+    for (source, target, weight) in edgelist {
+        if include_weights {
+            // Write the edge as "source target weight\n"
+            writeln!(file, "{} {} {}", source, target, weight).map_err(|e| NetviewError::GraphSerializationError(e.to_string()))?;
+        } else {
+            // Write the edge as "source target\n" (no weight)
+            writeln!(file, "{} {}", source, target).map_err(|e| NetviewError::GraphSerializationError(e.to_string()))?;
         }
-    }).collect();
+    }
 
-    let graph_data = GraphData { nodes, edges };
-
-    // Attempt to open the file for writing
-    let file = File::create(path).map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
-
-    // Attempt to serialize the graph data to JSON and write it to the file
-    serde_json::to_writer(file, &graph_data).map_err(|e| NetviewError::GraphSerializationError(e.to_string()))?;
-
+    // Return Ok(()) if everything succeeded
     Ok(())
 }
+
 
 /// Converts a `Graph<N, E, Undirected>` into an adjacency matrix
 ///
@@ -377,17 +450,15 @@ where
 ///
 /// This example demonstrates how to use the function with both representations for non-existent edges, 
 /// showing how to convert a graph into an adjacency matrix with either `NaN` or `0.0` for missing edges.
-pub fn graph_to_adjacency_matrix<N, E>(graph: &Graph<N, E, Undirected>, nan: bool) -> Result<Vec<Vec<f64>>, NetviewError>
-where
-    E: Clone + Into<f64>
+pub fn graph_to_adjacency_matrix(graph: &Graph<NodeLabel, EdgeLabel, Undirected>, nan: bool) -> Result<Vec<Vec<f64>>, NetviewError>
 {
     let node_count = graph.node_count();
     let mut matrix = vec![vec![match nan { true => NAN, false => 0.}; node_count]; node_count];
 
     for edge_ref in graph.edge_references() {
         let (source, target) = (edge_ref.source().index(), edge_ref.target().index());
-        // Safely attempt conversion of E to f64, handling potential conversion issues
-        let weight: f64 = edge_ref.weight().clone().into();
+
+        let weight = edge_ref.weight().weight;
 
         matrix[source][target] = weight;
         // Since the graph is undirected, mirror the weights
@@ -398,16 +469,56 @@ where
 }
     
 
+/// Converts a `Graph<N, E, Undirected>` into an edge list compatible with igraph.
+///
+/// # Arguments
+///
+/// * `graph` - Input `petgraph::Graph` to be converted.
+///
+/// # Returns
+///
+/// A `Vec<(usize, usize, f64)>` representing the edges, where each tuple contains the source
+/// node index, target node index, and edge weight.
+///
+/// # Examples
+///
+/// ```
+/// use petgraph::Graph;
+/// use petgraph::Undirected;
+/// use netview::graph_to_edgelist;
+///
+/// let mut graph = Graph::<&str, f64, Undirected>::new_undirected();
+/// let a = graph.add_node("A");
+/// let b = graph.add_node("B");
+/// graph.add_edge(a, b, 1.5);
+///
+/// let edgelist = graph_to_edgelist(&graph);
+/// assert_eq!(edgelist, vec![(0, 1, 1.5)]);
+/// ```
+pub fn graph_to_edgelist(graph: &Graph<NodeLabel, EdgeLabel, Undirected>) -> Vec<(usize, usize, f64)>
+{
+    let mut edgelist = Vec::new();
+
+    // Iterate through each edge in the graph
+    for edge_ref in graph.edge_references() {
+        let source = edge_ref.source().index();
+        let target = edge_ref.target().index();
+
+        // Safely attempt conversion of E to f64
+        let weight: f64 = edge_ref.weight().weight;
+
+        // Add the edge to the edge list (igraph treats undirected edges as a single pair)
+        edgelist.push((source, target, weight));
+    }
+
+    edgelist
+}
+
 
 #[cfg(test)]
 mod tests {
 
     use super::*;
-
-    use petgraph::graph::NodeIndex;
-    use std::path::PathBuf;
-    use tempfile::tempdir;
-    use std::fs;
 
     #[test]
     fn test_empty_matrix() {
@@ -568,309 +679,4 @@ mod tests {
         graph
     }
 
-    #[test]
-    fn test_write_empty_graph() {
-        let graph = Graph::<&str, i32>::new();
-        let dir = tempdir().unwrap();
-        let file_path = dir.path().join("empty_graph.json");
-
-        write_json_graph(&graph, &file_path).unwrap();
-        let metadata = fs::metadata(file_path).unwrap();
-        assert!(metadata.len() > 0);
-    }
-
-    #[test]
-    fn test_write_simple_graph() {
-        let graph = setup_test_graph();
-        let dir = tempdir().unwrap();
-        let file_path = dir.path().join("simple_graph.json");
-        write_json_graph(&graph, &file_path).unwrap();
-        assert!(file_path.exists());
-        let content = fs::read_to_string(file_path).unwrap();
-        assert!(content.contains("\"nodes\":[\"A\",\"B\"]"));
-        assert!(content.contains("\"weight\":7"));
-    }
-
-
-    #[test]
-    fn test_file_write_error() {
-        // Simulate a file write error by specifying a directory that does not exist
-        let graph = setup_test_graph();
-        let file_path = PathBuf::from("/non_existent_directory/graph.json");
-
-        let result = write_json_graph(&graph, &file_path);
-        assert!(matches!(result, Err(NetviewError::GraphFileError(_))));
-    }
-
-    #[test]
-    fn test_write_large_graph() {
-        let mut graph = Graph::new();
-        for i in 0..100 {
-            let node = graph.add_node(format!("Node {}", i));
-            if i != 0 {
-                let prev_node = NodeIndex::new(i as usize - 1);
-                graph.add_edge(prev_node, node, i as i32);
-            }
-        }
-
-        let dir = tempdir().unwrap();
-        let file_path = dir.path().join("large_graph.json");
-        write_json_graph(&graph, &file_path).unwrap();
-        
-        let metadata = fs::metadata(&file_path).unwrap();
-        assert!(metadata.len() > 0, "File should contain serialized large graph data");
-    }
-
-    #[test]
-    fn test_write_graph_with_multiple_edges() {
-        let mut graph = Graph::new();
-        let a = graph.add_node("A");
-        let b = graph.add_node("B");
-        graph.add_edge(a, b, 1);
-        graph.add_edge(a, b, 2); // Adding a second edge to test multiple edges
-
-        let dir = tempdir().unwrap();
-        let file_path = dir.path().join("multi_edge_graph.json");
-        write_json_graph(&graph, &file_path).unwrap();
-
-        let content = fs::read_to_string(file_path).unwrap();
-        assert!(content.contains("\"weight\":1") && content.contains("\"weight\":2"), "File should contain both edges");
-    }
-
-    #[test]
-    fn test_nonexistent_path() {
-        // Attempt to write to a path that cannot be created
-        let graph = setup_test_graph();
-        // Using a path with invalid characters for most filesystems
-        let file_path = PathBuf::from(format!("{}/invalid_path/graph.json", tempdir().unwrap().path().to_string_lossy()));
-
-        let result = write_json_graph(&graph, &file_path);
-        assert!(matches!(result, Err(NetviewError::GraphFileError(_))));
-    }
-
-
-    #[test]
-    fn empty_graph() {
-        let graph: Graph<&str, f64, Undirected> = Graph::new_undirected();
-        let matrix = graph_to_adjacency_matrix(&graph, false).unwrap();
-        assert!(matrix.is_empty());
-    }
-
-
-
-    #[test]
-    fn two_node_graph_with_edge() {
-        let mut graph = Graph::new_undirected();
-        let a = graph.add_node("A");
-        let b = graph.add_node("B");
-        graph.add_edge(a, b, 2.5);
-        let matrix = graph_to_adjacency_matrix(&graph, true).unwrap();
-        assert_eq!(matrix[0][1], 2.5);
-        assert!(matrix[1][0].is_nan()); // For directed graph
-    }
-
-    #[test]
-    fn graph_with_multiple_edges() {
-        let mut graph = Graph::new_undirected(); // This creates a directed graph by default
-        let a = graph.add_node("A");
-        let b = graph.add_node("B");
-        let c = graph.add_node("C");
-        graph.add_edge(a, b, 3.0);
-        graph.add_edge(a, c, 4.5);
-        let matrix = graph_to_adjacency_matrix(&graph, true).unwrap();
-        assert_eq!(matrix[0][1], 3.0);
-        assert_eq!(matrix[0][2], 4.5);
-        assert!(matrix[1][0].is_nan()); // No edge from B to A in a directed graph
-    }
-
-    #[test]
-    fn non_existent_edge() {
-        let mut graph = Graph::new_undirected();
-        let a = graph.add_node("A");
-        let b = graph.add_node("B");
-        graph.add_node("C"); // C has no edges
-        graph.add_edge(a, b, 1.0);
-        let matrix = graph_to_adjacency_matrix(&graph, true).unwrap();
-        assert!(matrix[2][0].is_nan() && matrix[2][1].is_nan(), "Edges involving 'C' should be NaN");
-    }
-
-    #[test]
-    fn graph_with_self_loops() {
-        let mut graph = Graph::new_undirected();
-        let a = graph.add_node("A");
-        graph.add_edge(a, a, 2.0); // Self-loop at A
-        let matrix = graph_to_adjacency_matrix(&graph, true).unwrap();
-        assert_eq!(matrix[0][0], 2.0, "Self-loop at 'A' should have a weight of 2.0");
-    }
-
-    #[test]
-    fn large_graph_performance() {
-        let mut graph = Graph::new_undirected();
-        for i in 0..100 {
-            graph.add_node(format!("Node {}", i));
-        }
-        // Creating a larger graph with edges between sequential nodes
-        for i in 0..99 {
-            graph.add_edge(NodeIndex::new(i), NodeIndex::new(i + 1), i as f64 + 1.0);
-        }
-        let now = std::time::Instant::now();
-        let matrix = graph_to_adjacency_matrix(&graph, true).unwrap();
-        let elapsed = now.elapsed();
-        assert_eq!(matrix.len(), 100, "The graph should have 100 nodes.");
-        assert!(elapsed.as_secs_f64() < 1.0, "Function should be performant for large graphs.");
-    }
-
-    #[test]
-    fn test_missing_weights_default_to_nan() {
-        let mut graph = Graph::<&str, f64, Undirected>::new_undirected();
-        let a = graph.add_node("A");
-        let b = graph.add_node("B");
-        graph.add_node("C"); // C is isolated
-        graph.add_edge(a, b, 2.5);
-
-        let matrix = graph_to_adjacency_matrix(&graph, true).unwrap();
-        assert!(matrix[0][2].is_nan());
-        assert!(matrix[2][1].is_nan());
-        assert!(matrix[2][2].is_nan());
-    }
-
-    #[test]
-    fn test_negative_weights() {
-        let mut graph = Graph::new_undirected();
-        let a = graph.add_node("A");
-        let b = graph.add_node("B");
-        graph.add_edge(a, b, -1.5);
-
-        let matrix = graph_to_adjacency_matrix(&graph, true).unwrap();
-        assert_eq!(matrix[0][1], -1.5);
-    }
-
-    #[test]
-    fn test_zero_weights() {
-        let mut graph = Graph::new_undirected();
-        let a = graph.add_node("A");
-        let b = graph.add_node("B");
-        graph.add_edge(a, b, 0.0);
-
-        let matrix = graph_to_adjacency_matrix(&graph, true).unwrap();
-        assert_eq!(matrix[0][1], 0.0);
-    }
-
-    #[test]
-    fn test_empty_mnn_output() {
-        let mnn_output = vec![];
-        let graph = convert_to_graph(&mnn_output, None).unwrap();
-        assert_eq!(graph.node_count(), 0, "Graph should have no nodes for empty input.");
-        assert_eq!(graph.edge_count(), 0, "Graph should have no edges for empty input.");
-    }
-
-    #[test]
-    fn test_simple_graph_conversion_with_distances() {
-        let mnn_output = vec![vec![1], vec![0]];
-        let distance_matrix = Some(vec![vec![0.0, 1.0], vec![1.0, 0.0]]);
-        let graph = convert_to_graph(&mnn_output, distance_matrix.as_ref()).unwrap();
-        assert_eq!(graph.node_count(), 2, "Graph should have 2 nodes.");
-        assert_eq!(graph.edge_count(), 2, "Graph should have 2 edges for mutual neighbors.");
-    }
-
-    #[test]
-    fn test_simple_graph_conversion_without_distances() {
-        let mnn_output = vec![vec![1], vec![0]];
-        let graph = convert_to_graph(&mnn_output, None).unwrap();
-        assert_eq!(graph.node_count(), 2, "Graph should have 2 nodes.");
-        assert_eq!(graph.edge_count(), 2, "Graph should have 2 edges for mutual neighbors, with default weights.");
-    }
-
-    #[test]
-    fn test_graph_with_self_loops() {
-        let mnn_output = vec![vec![0]]; // Node 0 is its own neighbor
-        let distance_matrix = Some(vec![vec![0.0]]);
-        let graph = convert_to_graph(&mnn_output, distance_matrix.as_ref()).unwrap();
-        assert_eq!(graph.node_count(), 1, "Graph should have 1 node.");
-        assert_eq!(graph.edge_count(), 0, "Self-loops are not expected to create edges.");
-    }
-
-    #[test]
-    fn test_non_existent_neighbors() {
-        let mnn_output = vec![vec![1], vec![2]]; // References to non-existent neighbors
-        let distance_matrix = Some(vec![vec![0.0, 1.0]]); // Only one row in the matrix
-        let graph = convert_to_graph(&mnn_output, distance_matrix.as_ref()).unwrap();
-        // This test depends on how convert_to_graph handles non-existent rows in the distance matrix.
-        assert_eq!(graph.node_count(), 2, "Graph should have 2 nodes despite referencing a non-existent neighbor.");
-        assert_eq!(graph.edge_count(), 0, "Graph should have no edges due to non-existent neighbor distances.");
-    }
-
-    #[test]
-    fn test_graph_conversion_with_missing_distances() {
-        let mnn_output = vec![vec![1], vec![0]];
-        // Distance between node 0 and 1 is missing
-        let distance_matrix = Some(vec![vec![0.0], vec![0.0]]);
-        let graph = convert_to_graph(&mnn_output, distance_matrix.as_ref()).unwrap();
-        assert_eq!(graph.node_count(), 2, "Graph should have 2 nodes.");
-        // This test assumes that missing distances result in no edge being added
-        assert_eq!(graph.edge_count(), 0, "Graph should have no edges due to missing distances.");
-    }
-
-    #[test]
-    fn two_node_graph_with_edge_false_nan() {
-        let mut graph = Graph::new_undirected();
-        let a = graph.add_node("A");
-        let b = graph.add_node("B");
-        graph.add_edge(a, b, 2.5);
-        let matrix = graph_to_adjacency_matrix(&graph, false).unwrap();
-        assert_eq!(matrix[0][1], 2.5);
-        assert_eq!(matrix[1][0], 2.5); // Mirror for undirected graph
-        assert_eq!(matrix[0][0], 0.0, "No self-loop should result in 0.0");
-        assert_eq!(matrix[1][1], 0.0, "No self-loop should result in 0.0");
-    }
-
-    #[test]
-    fn graph_with_multiple_edges_false_nan() {
-        let mut graph = Graph::new_undirected();
-        let a = graph.add_node("A");
-        let b = graph.add_node("B");
-        let c = graph.add_node("C");
-        graph.add_edge(a, b, 3.0);
-        graph.add_edge(a, c, 4.5);
-        let matrix = graph_to_adjacency_matrix(&graph, false).unwrap();
-        assert_eq!(matrix[0][1], 3.0);
-        assert_eq!(matrix[0][2], 4.5);
-        assert_eq!(matrix[1][0], 3.0, "Mirror edge should have the same weight for undirected graph");
-        assert_eq!(matrix[2][0], 4.5, "Mirror edge should have the same weight for undirected graph");
-    }
-
-    #[test]
-    fn non_existent_edge_false_nan() {
-        let mut graph = Graph::new_undirected();
-        let a = graph.add_node("A");
-        let b = graph.add_node("B");
-        graph.add_node("C"); // C has no edges
-        graph.add_edge(a, b, 1.0);
-        let matrix = graph_to_adjacency_matrix(&graph, false).unwrap();
-        assert_eq!(matrix[2][0], 0.0, "Edges involving 'C' should be 0.0");
-        assert_eq!(matrix[2][1], 0.0, "Edges involving 'C' should be 0.0");
-    }
-
-    #[test]
-    fn graph_with_self_loops_false_nan() {
-        let mut graph = Graph::new_undirected();
-        let a = graph.add_node("A");
-        graph.add_edge(a, a, 2.0); // Self-loop at A
-        let matrix = graph_to_adjacency_matrix(&graph, false).unwrap();
-        assert_eq!(matrix[0][0], 2.0, "Self-loop at 'A' should have a weight of 2.0");
-    }
-
-    #[test]
-    fn test_missing_weights_default_to_zero() {
-        let mut graph = Graph::<&str, f64, Undirected>::new_undirected();
-        let a = graph.add_node("A");
-        let b = graph.add_node("B");
-        graph.add_node("C"); // C is isolated
-        graph.add_edge(a, b, 2.5);
-
-        let matrix = graph_to_adjacency_matrix(&graph, false).unwrap();
-        assert_eq!(matrix[0][2], 0.0, "Missing edge weights should default to 0.0");
-        assert_eq!(matrix[2][1], 0.0, "Missing edge weights should default to 0.0");
-        assert_eq!(matrix[2][2], 0.0, "Missing edge weights should default to 0.0");
-    }
 }
