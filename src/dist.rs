@@ -1,14 +1,181 @@
 extern crate rayon;
 
 use csv::{ReaderBuilder, Trim};
+use regex::Regex;
 use serde::Deserialize;
 use std::fs::File;
+use std::io::Write;
+use std::io::BufRead;
+use std::io::BufReader;
 use std::path::Path;
+use std::process::Command;
 
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
 
 use crate::error::NetviewError;
+
+/// Executes a system command to generate a distance matrix, and then parses
+/// and returns the matrix without the first row and column.
+///
+/// This function executes the `skani` command, which is expected to output a
+/// tab-delimited distance matrix. The first row (header) and first column (row index)
+/// are trimmed from the output, and the remaining data is returned as a symmetrical
+/// distance matrix.
+///
+/// # Examples
+///
+/// ```
+/// use vircov::subtype::skani_distance_matrix;
+///
+/// let result = skani_distance_matrix();
+/// match result {
+///     Ok(matrix) => println!("Processed matrix: {:?}", matrix),
+///     Err(e) => println!("Error occurred: {}", e),
+/// }
+/// ```
+pub fn skani_distance_matrix(
+    fasta: &Path, 
+    marker_compression_factor: usize, 
+    compression_factor: usize, 
+    threads: usize,
+    min_percent_identity: f64,
+    min_alignment_fraction: f64,
+    small_genomes: bool
+) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>), NetviewError> {
+
+    let args = if small_genomes {
+        vec![
+            String::from("triangle"), 
+            "-i".to_string(), fasta.display().to_string(),
+            "-t".to_string(), format!("{}", threads), 
+            "-s".to_string(), format!("{:.2}", min_percent_identity),
+            "--min-af".to_string(), format!("{:.2}", min_alignment_fraction),
+            String::from("--full-matrix"), 
+            String::from("--distance"), 
+            String::from("--small-genomes"), 
+        ]
+    } else {
+        vec![
+            String::from("triangle"), 
+            "-i".to_string(), fasta.display().to_string(),
+            "-m".to_string(), format!("{}", marker_compression_factor), 
+            "-c".to_string(), format!("{}", compression_factor), 
+            "-t".to_string(), format!("{}", threads), 
+            "-s".to_string(), format!("{:.2}", min_percent_identity),
+            "--min-af".to_string(), format!("{:.2}", min_alignment_fraction),
+            String::from("--full-matrix"), 
+            String::from("--distance"), 
+        ]
+    };
+
+    log::info!("Running 'skani' pairwise distance computation...");
+    let output = Command::new("skani")
+        .args(&args)
+        .output()?
+        .stdout;
+
+    let output_str = String::from_utf8_lossy(&output);
+
+    // Regex to match non-numeric and non-tab characters (to find rows and columns).
+    let re = Regex::new(r"\t").expect("Failed to compile regex");
+
+    let matrix: Vec<Vec<f64>> = output_str
+        .lines()
+        .skip(1) // Skip the first line (header).
+        .map(|line| {
+            re.split(line)
+                .skip(1) // Skip the first column (index).
+                .filter_map(|number| number.parse::<f64>().ok())
+                .collect()
+        })
+        .collect();
+
+    let af_matrix_path = Path::new("skani_matrix.af");
+    
+    let af_matrix: Vec<Vec<f64>> = if af_matrix_path.exists() {
+        let af_file = File::open(af_matrix_path)?;
+        let reader = BufReader::new(af_file);
+
+        let af_matrix: Vec<Vec<f64>> = reader
+            .lines()
+            .skip(1) // Skip the first line (header).
+            .map(|line| {
+                re.split(&line.unwrap())
+                    .skip(1) // Skip the first column (index).
+                    .filter_map(|number| number.parse::<f64>().ok())
+                    .collect()
+            })
+            .collect();
+
+        // Delete the skani_matrix.af file after parsing
+        std::fs::remove_file(af_matrix_path)?;
+
+        af_matrix
+    } else {
+        return Err(NetviewError::ParseSkaniMatrix);  // Handle case if the file doesn't exist
+    };
+
+    // Check if both matrices are square
+    if matrix.len() > 0 && matrix[0].len() == matrix.len() && af_matrix.len() > 0 && af_matrix[0].len() == af_matrix.len() {
+        Ok((matrix, af_matrix))  // Return distance matrix (you can also return both if needed)
+    } else {
+        Err(NetviewError::ParseSkaniMatrix)
+    }
+}
+
+
+/// Writes a matrix of `f64` values to a specified file in tab-delimited format.
+///
+/// # Arguments
+///
+/// * `matrix` - A two-dimensional vector (matrix) where each inner `Vec<f64>`
+///   represents a row of the matrix. Each `f64` element is written as a tab-separated
+///   value to the file.
+/// * `file_path` - A string slice that holds the path to the file where the matrix
+///   should be written. The function will create the file if it does not exist, or
+///   overwrite the file if it already exists.
+///
+/// # Errors
+///
+/// Returns a `SubtypeDatabaseError` if there is any problem during file operations,
+/// such as failing to create or write to the file.
+///
+/// # Example
+///
+/// ```rust
+/// let matrix: Vec<Vec<f64>> = vec![
+///     vec![1.0, 2.0, 3.0],
+///     vec![4.0, 5.0, 6.0],
+///     vec![7.0, 8.0, 9.0],
+/// ];
+/// 
+/// if let Err(e) = write_matrix_to_file(matrix, "matrix_output.txt") {
+///     eprintln!("Error writing matrix to file: {:?}", e);
+/// }
+/// ```
+pub fn write_matrix_to_file(
+    matrix: Vec<Vec<f64>>, 
+    file_path: &Path
+) -> Result<(), NetviewError> {
+    // Open the file for writing (or create it if it doesn't exist)
+    let mut file = File::create(file_path)?;
+
+    // Iterate through the rows of the matrix
+    for row in matrix {
+        // Convert each row into a tab-separated string
+        let row_str = row.iter()
+                         .map(|num| num.to_string())
+                         .collect::<Vec<String>>()
+                         .join("\t");
+
+        // Write the row to the file, followed by a newline
+        writeln!(file, "{}", row_str)?
+    }
+
+    Ok(())
+}
+
 
 
 /// Represents a row in the matrix for easier handling with serde.
@@ -44,12 +211,12 @@ struct MatrixRow(Vec<f64>);
 /// 
 /// println!("{:#?}", distance_matrix);
 /// ```
-pub fn parse_input_matrix<P: AsRef<Path>>(file_path: P, is_tsv: bool) -> Result<Vec<Vec<f64>>, NetviewError> {
+pub fn parse_input_matrix<P: AsRef<Path>>(file_path: P, is_csv: bool) -> Result<Vec<Vec<f64>>, NetviewError> {
 
     let file = File::open(file_path.as_ref()).map_err(|_| NetviewError::FileReadError)?;
 
     let mut rdr = ReaderBuilder::new()
-        .delimiter(if is_tsv { b'\t' } else { b',' })
+        .delimiter(if is_csv { b',' } else { b'\t' })
         .trim(Trim::All)
         .has_headers(false)
         .from_reader(file);

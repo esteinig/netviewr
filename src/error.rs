@@ -40,4 +40,6 @@ pub enum NetviewError {
     IoError(#[from] std::io::Error),
     #[error("Error retrieving NodeIndex during graph construction")]
     NodeIndexError,
+    #[error("Failed to parse `skani` output matrix into symmetrical distance matrix")]
+    ParseSkaniMatrix,
 }

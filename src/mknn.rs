@@ -3,9 +3,9 @@ use petgraph::{dot::Dot, Graph, Undirected};
 use csv::WriterBuilder;
 use serde_json;
 use serde::{Deserialize, Serialize};
-use std::io::{BufReader, BufRead};
+use std::io::{BufReader, BufRead, Read};
 use std::{fs::File, io::Write, path::Path};
-use petgraph::visit::{EdgeRef, IntoNodeReferences};
+use petgraph::visit::EdgeRef;
 use core::f64::NAN;
 use petgraph::graph::NodeIndex;
 use std::collections::{HashMap, HashSet};
@@ -203,6 +203,8 @@ where
     NodeLabel: Serialize + std::fmt::Debug,
     EdgeLabel: Serialize + std::clone::Clone + std::fmt::Debug,
 {
+    
+    log::info!("Writing graph to output file: {}", path.display());
     let mut file = File::create(path).map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
 
     match format {
@@ -211,7 +213,8 @@ where
             write!(file, "{:?}", dot).map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
         },
         GraphFormat::Json => {
-            write_json_graph(graph, path)?;
+            let jgraph = GraphJson::from(graph);
+            jgraph.write(path)?;
         },
         GraphFormat::Adjacency => {
             let adj_matrix = graph_to_adjacency_matrix(graph, false)?;
@@ -226,56 +229,62 @@ where
     Ok(())
 }
 
-
-/// Writes a `petgraph::Graph` with `NodeLabel` and `EdgeLabel` to a JSON file.
-///
-/// This function uses the `serde`-derived `Serialize` implementation of `NodeLabel` and `EdgeLabel`
-/// to directly serialize the graph nodes and edges into JSON format.
-///
-/// # Arguments
-/// * `graph`          - Reference to the graph to be serialized.
-/// * `path`           - Path to the output file where the JSON should be written.
-/// * `include_weights` - Whether to include weights (distance) in the edge list.
-///
-/// # Returns
-/// * `Ok(())` on success.
-/// * `Err(NetviewError)` on failure, with detailed error information.
-pub fn write_json_graph<NodeLabel, EdgeLabel>(
-    graph: &Graph<NodeLabel, EdgeLabel, Undirected>,
-    path: &std::path::Path,
-) -> Result<(), NetviewError>
-where
-    NodeLabel: Serialize + std::fmt::Debug,
-    EdgeLabel: Serialize + std::fmt::Debug,
-{
-    let mut file = File::create(path).map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
-
-    // Serialize nodes and edges
-    let mut nodes = vec![];
-    let mut edges = vec![];
-
-    // Serialize the nodes
-    for (_, node_label) in graph.node_references() {
-        nodes.push(node_label);
-    }
-
-    // Serialize the edges
-    for edge in graph.edge_references() {
-       edges.push(edge.weight());
-    }
-
-    // Create a JSON object with nodes and edges
-    let graph_json = serde_json::json!({
-        "nodes": nodes,
-        "edges": edges
-    });
-
-    // Write the serialized JSON to the file
-    serde_json::to_writer_pretty(&mut file, &graph_json)
-        .map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
-
-    Ok(())
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct GraphJson {
+    pub nodes: Vec<NodeLabel>,
+    pub edges: Vec<EdgeLabel>
 }
+
+
+impl GraphJson {
+    // Create a new GraphJson from vectors of node and edge references
+    pub fn new(nodes: Vec<NodeLabel>, edges: Vec<EdgeLabel>) -> Self {
+        Self { nodes, edges }
+    }
+
+    // Create a GraphJson from a petgraph::Graph
+    pub fn from(graph: &Graph<NodeLabel, EdgeLabel, Undirected>) -> Self {
+        let nodes: Vec<NodeLabel> = graph.node_weights().cloned().collect();
+        let edges: Vec<EdgeLabel> = graph.edge_weights().cloned().collect();
+        Self::new(nodes, edges)
+    }
+
+    // Write the GraphJson to a file as JSON
+    pub fn write(&self, path: &Path) -> Result<(), NetviewError> {
+        let file = File::create(path).map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
+        serde_json::to_writer_pretty(file, self)
+            .map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
+        Ok(())
+    }
+
+    // Read a GraphJson from a JSON file and deserialize it
+    pub fn read(path: &Path) -> Result<Self, NetviewError> {
+        let mut file = File::open(path).map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
+        let mut data = String::new();
+        file.read_to_string(&mut data).map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
+        let graph_json: GraphJson = serde_json::from_str(&data)
+            .map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
+        Ok(graph_json)
+    }
+
+    // Convert GraphJson back into a petgraph::Graph
+    pub fn into_graph(self) -> Graph<NodeLabel, EdgeLabel, Undirected> {
+        let mut graph = Graph::<NodeLabel, EdgeLabel, Undirected>::new_undirected();
+
+        // Create node indices in the graph
+        let node_indices: Vec<_> = self.nodes.into_iter().map(|node| {
+            graph.add_node(node)
+        }).collect();
+
+        // Add edges using the stored edge data
+        for edge in self.edges {
+            graph.add_edge(node_indices[edge.index], node_indices[edge.index], edge);
+        }
+
+        graph
+    }
+}
+
 
 /// Reads an edge list from a file and constructs a petgraph Graph.
 ///

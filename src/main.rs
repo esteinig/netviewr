@@ -2,6 +2,7 @@
 #![allow(unused_variables)]
 #![allow(unreachable_code)]
 
+use netview::dist::{skani_distance_matrix, write_matrix_to_file};
 use netview::mknn::write_graph_to_file;
 use netview::netview::Netview;
 use netview::terminal::{App, Commands};
@@ -21,15 +22,37 @@ pub fn main() -> Result<(), NetviewError> {
             
             let netview = Netview::new();
 
-            let graph = netview.create_graph(
-                &args.distance_matrix, 
+            let graph = netview.graph_from_files(
+                &args.dist, 
                 args.k, 
-                args.af_matrix.clone(),
-            true
+                args.afrac.clone(),
+                false
             )?;
 
-            log::info!("Writing graph to output file: {}", args.output.display());
-            write_graph_to_file(&graph, &args.output, &args.output_format, args.weights)?;
+            write_graph_to_file(
+                &graph, 
+                &args.output, 
+                &args.format, 
+                args.weights
+            )?;
+        },
+        Commands::Dist(args) => {
+
+            let (dist, af) = skani_distance_matrix(
+                &args.fasta, 
+                args.marker_compression_factor, 
+                args.compression_factor, 
+                args.threads, 
+                args.min_percent_identity,
+                args.min_alignment_fraction,
+                args.small_genomes
+            )?;
+
+            write_matrix_to_file(dist, &args.dist)?;
+
+            if let Some(afrac) = &args.afrac {
+                write_matrix_to_file(af, &afrac)?;
+            }
         }
     }
     Ok(())

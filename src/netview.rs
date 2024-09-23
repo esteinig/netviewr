@@ -3,38 +3,106 @@ use std::path::PathBuf;
 use petgraph::{Graph, Undirected};
 use serde::{Deserialize, Serialize};
 
-use crate::{dist::{euclidean_distance_of_distances, parse_input_matrix}, error::NetviewError, mknn::{convert_to_graph, k_mutual_nearest_neighbors}};
+use crate::{dist::{euclidean_distance_of_distances, parse_input_matrix, skani_distance_matrix}, error::NetviewError, mknn::{convert_to_graph, k_mutual_nearest_neighbors}};
 
-pub struct Netview {
-}
+pub struct Netview {}
 
 impl Netview {
     pub fn new() -> Self {
-        Self { }
+        Self {}
     }
-    pub fn create_graph(&self, distance_matrix: &PathBuf, k: usize, af_matrix: Option<PathBuf>, tsv: bool) -> Result<Graph<NodeLabel, EdgeLabel, Undirected>, NetviewError> {
+
+    pub fn dist(
+        &self,
+        fasta: &PathBuf, 
+        marker_compression_factor: usize, 
+        compression_factor: usize, 
+        threads: usize,
+        min_percent_identity: f64,
+        min_alignment_fraction: f64,
+        small_genomes: bool
+    ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>), NetviewError> {
+        skani_distance_matrix(
+            fasta,
+            marker_compression_factor,
+            compression_factor,
+            threads,
+            min_percent_identity,
+            min_alignment_fraction,
+            small_genomes
+        )
+    }
+
+    /// This version of the graph method parses distance and af matrices from file paths (PathBuf).
+    pub fn graph_from_files(
+        &self, 
+        dist_matrix: &PathBuf, 
+        k: usize, 
+        af_matrix: Option<PathBuf>, 
+        is_csv: bool
+    ) -> Result<Graph<NodeLabel, EdgeLabel, Undirected>, NetviewError> {
         
-        log::info!("Parsing distance matrix: {}", distance_matrix.display());
-        let distance = parse_input_matrix(&distance_matrix, tsv)?;
+        log::info!("Reading distance matrix: {}", dist_matrix.display());
+        let distance = parse_input_matrix(dist_matrix, is_csv)?;
 
         let af = if let Some(path) = af_matrix {
-            log::info!("Parsing alignment fraction matrix: {}", path.display());
-            Some(parse_input_matrix(&path, tsv)?)
+            log::info!("Reading alignment fraction matrix: {}", path.display());
+            Some(parse_input_matrix(&path, is_csv)?)
         } else {
             None
         };
 
         log::info!("Computing Euclidean distance abstraction...");
-        let distance_of_distances = euclidean_distance_of_distances(&distance, false, false, None)?;
+        let distance_of_distances = euclidean_distance_of_distances(
+            &distance, 
+            false, 
+            false, 
+            None
+        )?;
         
         log::info!("Computing mutual nearest neighbor graph...");
-        let mutual_nearest_neighbors = k_mutual_nearest_neighbors(&distance_of_distances, k)?;
+        let mutual_nearest_neighbors = k_mutual_nearest_neighbors(
+            &distance_of_distances, 
+            k
+        )?;
 
         let mknn_graph = convert_to_graph(
             &mutual_nearest_neighbors, 
             Some(&distance), 
             af.as_ref()
         )?;       
+
+        Ok(mknn_graph)
+    }
+
+    /// This version of the graph method takes the distance and af matrices directly as Vec<Vec<f64>>.
+    pub fn graph_from_vecs(
+        &self, 
+        dist_matrix: Vec<Vec<f64>>, 
+        k: usize, 
+        af_matrix: Option<Vec<Vec<f64>>>
+    ) -> Result<Graph<NodeLabel, EdgeLabel, Undirected>, NetviewError> {
+        
+        log::info!("Received distance matrix directly.");
+
+        let distance_of_distances = euclidean_distance_of_distances(
+            &dist_matrix, 
+            false, 
+            false, 
+            None
+        )?;
+
+        log::info!("Computing mutual nearest neighbor graph...");
+        let mutual_nearest_neighbors = k_mutual_nearest_neighbors(
+            &distance_of_distances, 
+            k
+        )?;
+
+        let mknn_graph = convert_to_graph(
+            &mutual_nearest_neighbors, 
+            Some(&dist_matrix), 
+            af_matrix.as_ref()
+        )?;
 
         Ok(mknn_graph)
     }
