@@ -2,7 +2,7 @@
 #![allow(unused_variables)]
 #![allow(unreachable_code)]
 
-use netview::dist::{skani_distance_matrix, write_matrix_to_file};
+use netview::dist::{skani_distance_matrix, write_ids, write_matrix_to_file};
 use netview::mknn::write_graph_to_file;
 use netview::netview::Netview;
 use netview::terminal::{App, Commands};
@@ -10,6 +10,7 @@ use netview::error::NetviewError;
 use netview::log::init_logger;
 
 use clap::Parser;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 pub fn main() -> Result<(), NetviewError> {
     
@@ -22,23 +23,36 @@ pub fn main() -> Result<(), NetviewError> {
             
             let netview = Netview::new();
 
-            let graph = netview.graph_from_files(
-                &args.dist, 
-                args.k, 
-                args.afrac.clone(),
-                false
-            )?;
+            args.k.par_iter().for_each(|k| {
 
-            write_graph_to_file(
-                &graph, 
-                &args.output, 
-                &args.format, 
-                args.weights
-            )?;
+                log::info!("Computing mutual nearest neighbor graph at k = {k}");
+                
+                let graph = netview.graph_from_files(
+                    &args.dist, 
+                    *k, 
+                    args.afrac.clone(),
+                    args.ids.clone(),
+                    false,
+                ).expect(&format!("Failed to create graph (k = {k})"));
+                
+                let output = if args.k.len() == 1 {
+                    args.output.clone()
+                } else {
+                    args.output.with_extension(format!("k{k}"))
+                };
+
+                write_graph_to_file(
+                    &graph, 
+                    &output, 
+                    &args.format, 
+                    args.weights
+                ).expect(&format!("Failed to write graph (k = {k})"));
+            });
+
         },
         Commands::Dist(args) => {
 
-            let (dist, af) = skani_distance_matrix(
+            let (dist, af, ids) = skani_distance_matrix(
                 &args.fasta, 
                 args.marker_compression_factor, 
                 args.compression_factor, 
@@ -48,10 +62,18 @@ pub fn main() -> Result<(), NetviewError> {
                 args.small_genomes
             )?;
 
+            log::info!("Writing distance matrix to: {}", args.dist.display());
             write_matrix_to_file(dist, &args.dist)?;
 
-            if let Some(afrac) = &args.afrac {
-                write_matrix_to_file(af, &afrac)?;
+            if let Some(path) = &args.afrac {
+
+                log::info!("Writing alignment fraction matrix to: {}", path.display());
+                write_matrix_to_file(af, &path)?;
+            }
+            if let Some(path) = &args.ids {
+
+                log::info!("Writing sequence identifiers to: {}", path.display());
+                write_ids(ids, &path)?;
             }
         }
     }

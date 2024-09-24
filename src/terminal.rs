@@ -23,17 +23,21 @@ pub enum Commands {
 }
 
 
+
 #[derive(Debug, Args)]
 pub struct GraphArgs {
     /// Distance matrix for graph computation (square)
     #[clap(long, short = 'd', required = true)]
     pub dist: PathBuf,
     /// K parameter for mutual nearest neighbor algorithm
-    #[clap(long = "mknn", short = 'k', default_value = "20")]
-    pub k: usize,
+    #[clap(long = "mknn", short = 'k', num_args(0..), default_value="Vec::from([20])")]
+    pub k: Vec<usize>,
     /// Alignment fraction matrix for populating edge labels from 'skani'
     #[clap(long, short = 'a', required = false)]
     pub afrac: Option<PathBuf>,
+    /// Node identifier file e.g. sequence identifiers
+    #[clap(long, short = 'i', required = false)]
+    pub ids: Option<PathBuf>,
     /// Include distances as edge weights in the graph
     #[clap(long, short = 'w')]
     pub weights: bool,
@@ -56,6 +60,9 @@ pub struct DistArgs {
     /// Output pairwise alignment fraction matrix as tab-delimited text file 
     #[clap(long, short = 'a')]
     pub afrac: Option<PathBuf>,
+    /// Output sequence identifiers in order of matrix rows 
+    #[clap(long, short = 'i')]
+    pub ids: Option<PathBuf>,
     /// Databases for subtyping
     #[clap(long, short = 'c', default_value="30")]
     pub compression_factor: usize,

@@ -87,6 +87,7 @@ pub fn convert_to_graph(
     mutual_nearest_neighbors: &Vec<Vec<usize>>, 
     distance_matrix: Option<&Vec<Vec<f64>>>,  // Distance matrix
     af_matrix: Option<&Vec<Vec<f64>>>,        // Alignment fraction matrix
+    ids: Option<Vec<String>>                  // Node identifiers / row identifiers
 ) -> Result<Graph<NodeLabel, EdgeLabel, Undirected>, NetviewError> {
     
     // Create an undirected graph with NodeLabel and EdgeLabel
@@ -99,7 +100,10 @@ pub fn convert_to_graph(
 
     // Add all nodes to the graph as NodeLabels
     for (node_index, _) in mutual_nearest_neighbors.iter().enumerate() {
-        let node_label = NodeLabel::new(node_index);  // Create NodeLabel with index
+        let node_label = NodeLabel::new(
+            node_index, 
+            match ids { Some(ref ids) => ids.get(node_index).cloned(), None => None}
+        );  // Create NodeLabel with index and id if provided
         let graph_node_index = graph.add_node(node_label);  // Add NodeLabel to the graph
         index_map.insert(node_index, graph_node_index);
     }

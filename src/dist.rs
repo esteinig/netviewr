@@ -1,9 +1,11 @@
 extern crate rayon;
 
 use csv::{ReaderBuilder, Trim};
+use needletail::parse_fastx_file;
 use regex::Regex;
 use serde::Deserialize;
 use std::fs::File;
+use std::io::BufWriter;
 use std::io::Write;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -14,6 +16,54 @@ use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
 
 use crate::error::NetviewError;
+
+pub fn extract_fasta_ids(fasta_path: &Path) -> Result<Vec<String>, NetviewError> {
+    // Open the FASTA file using needletail
+    let mut reader = parse_fastx_file(fasta_path)?;
+
+    // Create a vector to store sequence IDs
+    let mut sequence_ids: Vec<String> = Vec::new();
+
+    // Iterate over the FASTA sequences
+    while let Some(record) = reader.next() {
+        let record = record?;
+
+        // Convert the full header to a string and split by whitespace
+        let full_header = String::from_utf8_lossy(record.id());
+        
+        // Extract the part before the first space (the sequence ID)
+        if let Some(seq_id) = full_header.split_whitespace().next() {
+            sequence_ids.push(seq_id.to_string());
+        }
+    }
+
+    Ok(sequence_ids)
+}
+
+pub fn read_ids(id_path: &Path) -> Result<Vec<String>, NetviewError> {
+    let reader = BufReader::new(File::open(id_path)?);
+
+    // Create a vector to store identifiers
+    let mut ids: Vec<String> = Vec::new();
+
+    for line in reader.lines() {
+        let id = line?;
+        ids.push(id)
+    }
+
+    Ok(ids)
+}
+
+
+pub fn write_ids(ids: Vec<String>, file: &Path) -> Result<(), NetviewError> {
+    let mut writer = BufWriter::new(File::create(file)?);
+
+    for id in ids {
+        writeln!(writer, "{}", &id)?
+    }
+
+    Ok(())
+}
 
 /// Executes a system command to generate a distance matrix, and then parses
 /// and returns the matrix without the first row and column.
@@ -42,7 +92,7 @@ pub fn skani_distance_matrix(
     min_percent_identity: f64,
     min_alignment_fraction: f64,
     small_genomes: bool
-) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>), NetviewError> {
+) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<String>), NetviewError> {
 
     let args = if small_genomes {
         vec![
@@ -69,7 +119,7 @@ pub fn skani_distance_matrix(
         ]
     };
 
-    log::info!("Running 'skani' pairwise distance computation...");
+    log::info!("Computing pairwise distances with 'skani' (Shaw and Yu, 2023)");
     let output = Command::new("skani")
         .args(&args)
         .output()?
@@ -116,9 +166,11 @@ pub fn skani_distance_matrix(
         return Err(NetviewError::ParseSkaniMatrix);  // Handle case if the file doesn't exist
     };
 
+    let fasta_ids = extract_fasta_ids(&fasta)?;
+
     // Check if both matrices are square
     if matrix.len() > 0 && matrix[0].len() == matrix.len() && af_matrix.len() > 0 && af_matrix[0].len() == af_matrix.len() {
-        Ok((matrix, af_matrix))  // Return distance matrix (you can also return both if needed)
+        Ok((matrix, af_matrix, fasta_ids))  // Return distance matrix (you can also return both if needed)
     } else {
         Err(NetviewError::ParseSkaniMatrix)
     }

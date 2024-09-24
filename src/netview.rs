@@ -3,7 +3,22 @@ use std::path::PathBuf;
 use petgraph::{Graph, Undirected};
 use serde::{Deserialize, Serialize};
 
-use crate::{dist::{euclidean_distance_of_distances, parse_input_matrix, skani_distance_matrix}, error::NetviewError, mknn::{convert_to_graph, k_mutual_nearest_neighbors}};
+use crate::{dist::{euclidean_distance_of_distances, parse_input_matrix, read_ids, skani_distance_matrix}, error::NetviewError, mknn::{convert_to_graph, k_mutual_nearest_neighbors}};
+
+
+pub trait NetviewLabels {
+    fn label_nodes(&self, labels: Vec<Option<String>>) -> Result<(), NetviewError>;
+}
+
+impl NetviewLabels for Graph<NodeLabel, EdgeLabel, Undirected> {
+    fn label_nodes(&self, labels: Vec<Option<String>>) -> Result<(), NetviewError> {
+        
+        
+
+        Ok(())
+    }
+}
+
 
 pub struct Netview {}
 
@@ -21,7 +36,7 @@ impl Netview {
         min_percent_identity: f64,
         min_alignment_fraction: f64,
         small_genomes: bool
-    ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>), NetviewError> {
+    ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<String>), NetviewError> {
         skani_distance_matrix(
             fasta,
             marker_compression_factor,
@@ -39,6 +54,7 @@ impl Netview {
         dist_matrix: &PathBuf, 
         k: usize, 
         af_matrix: Option<PathBuf>, 
+        ids: Option<PathBuf>,
         is_csv: bool
     ) -> Result<Graph<NodeLabel, EdgeLabel, Undirected>, NetviewError> {
         
@@ -48,6 +64,13 @@ impl Netview {
         let af = if let Some(path) = af_matrix {
             log::info!("Reading alignment fraction matrix: {}", path.display());
             Some(parse_input_matrix(&path, is_csv)?)
+        } else {
+            None
+        };
+
+        let ids = if let Some(path) = ids {
+            log::info!("Reading identifier file: {}", path.display());
+            Some(read_ids(&path)?)
         } else {
             None
         };
@@ -69,7 +92,8 @@ impl Netview {
         let mknn_graph = convert_to_graph(
             &mutual_nearest_neighbors, 
             Some(&distance), 
-            af.as_ref()
+            af.as_ref(),
+            ids
         )?;       
 
         Ok(mknn_graph)
@@ -80,7 +104,8 @@ impl Netview {
         &self, 
         dist_matrix: Vec<Vec<f64>>, 
         k: usize, 
-        af_matrix: Option<Vec<Vec<f64>>>
+        af_matrix: Option<Vec<Vec<f64>>>,
+        ids: Option<Vec<String>>
     ) -> Result<Graph<NodeLabel, EdgeLabel, Undirected>, NetviewError> {
         
         log::info!("Received distance matrix directly.");
@@ -101,7 +126,8 @@ impl Netview {
         let mknn_graph = convert_to_graph(
             &mutual_nearest_neighbors, 
             Some(&dist_matrix), 
-            af_matrix.as_ref()
+            af_matrix.as_ref(),
+            ids
         )?;
 
         Ok(mknn_graph)
@@ -111,7 +137,8 @@ impl Netview {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct NodeLabel {
-    pub index: usize,                   // Original dataset index
+    pub index: usize,                    // Original dataset index
+    pub id: Option<String>,              // Node identifier e.g. sequence identifier
     pub label: Option<String>,           // Label, could be inferred later
     pub label_confidence: f64,           // Confidence in the label (0.0 to 1.0)
 }
@@ -121,13 +148,15 @@ impl NodeLabel {
     pub fn builder(index: usize) -> NodeLabelBuilder {
         NodeLabelBuilder {
             index,
+            id: None,
             label: None,
             label_confidence: 0.0,
         }
     }
-    pub fn new(index: usize) -> Self {
+    pub fn new(index: usize, id: Option<String>) -> Self {
         Self {
             index,
+            id,
             label: None,
             label_confidence: 0.0
         }
@@ -136,11 +165,16 @@ impl NodeLabel {
 
 pub struct NodeLabelBuilder {
     index: usize,
+    id: Option<String>,
     label: Option<String>,
     label_confidence: f64,
 }
 
 impl NodeLabelBuilder {
+    pub fn id(mut self, id: String) -> Self {
+        self.id = Some(id);
+        self
+    }
     pub fn label(mut self, label: String) -> Self {
         self.label = Some(label);
         self
@@ -153,6 +187,7 @@ impl NodeLabelBuilder {
 
     pub fn build(self) -> NodeLabel {
         NodeLabel {
+            id: self.id,
             index: self.index,
             label: self.label,
             label_confidence: self.label_confidence,

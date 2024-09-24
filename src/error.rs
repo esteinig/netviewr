@@ -42,4 +42,6 @@ pub enum NetviewError {
     NodeIndexError,
     #[error("Failed to parse `skani` output matrix into symmetrical distance matrix")]
     ParseSkaniMatrix,
+    #[error(transparent)]
+    NeedletailParseError(#[from] needletail::errors::ParseError),
 }
