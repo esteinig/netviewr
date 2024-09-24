@@ -1,18 +1,22 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use petgraph::{Graph, Undirected};
 use serde::{Deserialize, Serialize};
+use petgraph::{Graph, Undirected};
 
-use crate::{dist::{euclidean_distance_of_distances, parse_input_matrix, read_ids, skani_distance_matrix}, error::NetviewError, mknn::{convert_to_graph, k_mutual_nearest_neighbors}};
+use crate::dist::{euclidean_distance_of_distances, parse_input_matrix, parse_identifiers, skani_distance_matrix};
+use crate::mknn::{convert_to_graph, k_mutual_nearest_neighbors, GraphJson};
+use crate::error::NetviewError;
 
+pub type NetviewGraph = Graph<NodeLabel, EdgeLabel, Undirected>;
 
 pub trait NetviewLabels {
     fn label_nodes(&self, labels: Vec<Option<String>>) -> Result<(), NetviewError>;
 }
 
-impl NetviewLabels for Graph<NodeLabel, EdgeLabel, Undirected> {
+impl NetviewLabels for NetviewGraph {
     fn label_nodes(&self, labels: Vec<Option<String>>) -> Result<(), NetviewError> {
         
+        log::info!("Labelling nodes on NetviewGraph");
         
 
         Ok(())
@@ -20,14 +24,22 @@ impl NetviewLabels for Graph<NodeLabel, EdgeLabel, Undirected> {
 }
 
 
-pub struct Netview {}
+pub struct Netview {
+    pub graph: NetviewGraph
+}
 
 impl Netview {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            graph: NetviewGraph::new_undirected()
+        }
     }
-
-    pub fn dist(
+    pub fn from_json(path: &Path) -> Result<Self, NetviewError> {
+        Ok(Self {
+            graph: GraphJson::read(path)?.into_graph()
+        })
+    }
+    pub fn skani_distance(
         &self,
         fasta: &PathBuf, 
         marker_compression_factor: usize, 
@@ -48,13 +60,13 @@ impl Netview {
         )
     }
 
-    /// This version of the graph method parses distance and af matrices from file paths (PathBuf).
+    /// Main version of the graph method that parses the distance and alignment fraction matrices from file paths.
     pub fn graph_from_files(
         &self, 
         dist_matrix: &PathBuf, 
         k: usize, 
         af_matrix: Option<PathBuf>, 
-        ids: Option<PathBuf>,
+        identifiers: Option<PathBuf>,
         is_csv: bool
     ) -> Result<Graph<NodeLabel, EdgeLabel, Undirected>, NetviewError> {
         
@@ -68,9 +80,9 @@ impl Netview {
             None
         };
 
-        let ids = if let Some(path) = ids {
+        let ids = if let Some(path) = identifiers {
             log::info!("Reading identifier file: {}", path.display());
-            Some(read_ids(&path)?)
+            Some(parse_identifiers(&path)?)
         } else {
             None
         };
@@ -99,7 +111,7 @@ impl Netview {
         Ok(mknn_graph)
     }
 
-    /// This version of the graph method takes the distance and af matrices directly as Vec<Vec<f64>>.
+    /// Alternative version of the graph method that takes the distance and alignment fraction matrices directly.
     pub fn graph_from_vecs(
         &self, 
         dist_matrix: Vec<Vec<f64>>, 
@@ -134,13 +146,16 @@ impl Netview {
     }
 }
 
+/* Netview graph nodes and edges with associated 
+   metadata for downstream applications 
+*/
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct NodeLabel {
-    pub index: usize,                    // Original dataset index
-    pub id: Option<String>,              // Node identifier e.g. sequence identifier
-    pub label: Option<String>,           // Label, could be inferred later
-    pub label_confidence: f64,           // Confidence in the label (0.0 to 1.0)
+    pub index: usize,                    // Original index of sample or sequence in the input matrix
+    pub id: Option<String>,              // Node identifier e.g. sample or sequence identifier from input matrix
+    pub label: Option<String>,           // Label added or inferred downstream
+    pub label_confidence: f64,           // Confidence in the label (0.0 to 1.0) computed downstream
 }
 
 impl NodeLabel {
@@ -198,6 +213,8 @@ impl NodeLabelBuilder {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EdgeLabel {
     pub index: usize,              // Original edge index
+    pub source: usize,             // Node source index
+    pub target: usize,             // Node target index
     pub weight: f64,               // Original distance from the distance matrix as weight
     pub ani: Option<f64>,          // ANI similarity score (optional, not used for now)
     pub aai: Option<f64>,          // AAI similarity score (optional, not used for now)
@@ -206,20 +223,24 @@ pub struct EdgeLabel {
 
 impl EdgeLabel {
     // Builder pattern for EdgeLabel
-    pub fn builder(index: usize, dist: f64) -> EdgeLabelBuilder {
+    pub fn builder(index: usize, source: usize, target: usize, weight: f64) -> EdgeLabelBuilder {
         EdgeLabelBuilder {
             index,
-            dist,
+            source,
+            target,
+            weight,
             ani: None,
             aai: None,
             af: None,
         }
     }
 
-    pub fn new(index: usize, dist: f64, af: Option<f64>) -> Self {
+    pub fn new(index: usize, source: usize, target: usize, weight: f64, af: Option<f64>) -> Self {
         Self {
             index, 
-            weight: dist,
+            source,
+            target,
+            weight,
             af,
             ani: None,
             aai: None,
@@ -229,7 +250,9 @@ impl EdgeLabel {
 
 pub struct EdgeLabelBuilder {
     index: usize,
-    dist: f64,
+    source: usize,
+    target: usize,
+    weight: f64,
     ani: Option<f64>,
     aai: Option<f64>,
     af: Option<f64>,
@@ -254,7 +277,9 @@ impl EdgeLabelBuilder {
     pub fn build(self) -> EdgeLabel {
         EdgeLabel {
             index: self.index,
-            weight: self.dist,
+            source: self.source,
+            target: self.target,
+            weight: self.weight,
             ani: self.ani,
             aai: self.aai,
             af: self.af,

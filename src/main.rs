@@ -2,15 +2,20 @@
 #![allow(unused_variables)]
 #![allow(unreachable_code)]
 
+#[cfg(feature = "plot")]
+use netview::plot::plot_test;
+
 use netview::dist::{skani_distance_matrix, write_ids, write_matrix_to_file};
 use netview::mknn::write_graph_to_file;
-use netview::netview::Netview;
-use netview::terminal::{App, Commands};
-use netview::error::NetviewError;
 use netview::log::init_logger;
 
-use clap::Parser;
+use netview::terminal::{App, Commands};
+use netview::error::NetviewError;
+use netview::netview::Netview;
+
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use clap::Parser;
+
 
 pub fn main() -> Result<(), NetviewError> {
     
@@ -38,7 +43,7 @@ pub fn main() -> Result<(), NetviewError> {
                 let output = if args.k.len() == 1 {
                     args.output.clone()
                 } else {
-                    args.output.with_extension(format!("k{k}"))
+                    args.output.with_extension(format!("k{k}.{}", args.format))
                 };
 
                 write_graph_to_file(
@@ -75,6 +80,11 @@ pub fn main() -> Result<(), NetviewError> {
                 log::info!("Writing sequence identifiers to: {}", path.display());
                 write_ids(ids, &path)?;
             }
+        },
+
+        #[cfg(feature = "plot")]
+        Commands::Plot(args) => {
+            plot_test(&args.graph)?;
         }
     }
     Ok(())

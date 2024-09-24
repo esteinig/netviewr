@@ -12,7 +12,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::dist::make_symmetrical;
 use crate::error::NetviewError;
-use crate::netview::{EdgeLabel, NodeLabel};
+use crate::netview::{EdgeLabel, NetviewGraph, NodeLabel};
 
 
 /// Calculates the k-mutual nearest neighbors from a distance matrix.
@@ -87,8 +87,8 @@ pub fn convert_to_graph(
     mutual_nearest_neighbors: &Vec<Vec<usize>>, 
     distance_matrix: Option<&Vec<Vec<f64>>>,  // Distance matrix
     af_matrix: Option<&Vec<Vec<f64>>>,        // Alignment fraction matrix
-    ids: Option<Vec<String>>                  // Node identifiers / row identifiers
-) -> Result<Graph<NodeLabel, EdgeLabel, Undirected>, NetviewError> {
+    identifiers: Option<Vec<String>>          // Node identifiers / row identifiers
+) -> Result<NetviewGraph, NetviewError> {
     
     // Create an undirected graph with NodeLabel and EdgeLabel
     let mut graph = Graph::<NodeLabel, EdgeLabel, Undirected>::new_undirected();
@@ -100,11 +100,14 @@ pub fn convert_to_graph(
 
     // Add all nodes to the graph as NodeLabels
     for (node_index, _) in mutual_nearest_neighbors.iter().enumerate() {
+
         let node_label = NodeLabel::new(
             node_index, 
-            match ids { Some(ref ids) => ids.get(node_index).cloned(), None => None}
-        );  // Create NodeLabel with index and id if provided
-        let graph_node_index = graph.add_node(node_label);  // Add NodeLabel to the graph
+            match identifiers { Some(ref ids) => ids.get(node_index).cloned(), None => None}
+        );  // Create NodeLabel with index and identifier if provided
+
+        let graph_node_index = graph.add_node(node_label);
+
         index_map.insert(node_index, graph_node_index);
     }
 
@@ -113,6 +116,7 @@ pub fn convert_to_graph(
         let graph_node_index = *index_map.get(&node_index).ok_or(NetviewError::NodeIndexError)?;
 
         for &neighbor in neighbors.iter() {
+
             // Ensure edges are added only once
             let edge = if node_index < neighbor {
                 (node_index, neighbor)
@@ -121,6 +125,7 @@ pub fn convert_to_graph(
             };
 
             if !edge_set.contains(&edge) {
+
                 // Get the distance from the distance matrix, if provided
                 let dist = match distance_matrix {
                     Some(matrix) => matrix.get(node_index).and_then(|row| row.get(neighbor)).copied().unwrap_or(1.0),
@@ -134,7 +139,7 @@ pub fn convert_to_graph(
                 };
 
                 // Create the edge label with the index, distance, and af (alignment fraction)
-                let edge_label = EdgeLabel::new(edge_index, dist, af);
+                let edge_label = EdgeLabel::new(edge_index, edge.0, edge.1, dist, af);
 
                 let graph_neighbor_index = *index_map.get(&neighbor).ok_or(NetviewError::NodeIndexError)?;
                 graph.add_edge(graph_node_index, graph_neighbor_index, edge_label);
@@ -158,7 +163,17 @@ pub enum GraphFormat {
     Adjacency,
     Edges,
 }
-
+impl std::fmt::Display for GraphFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let output = match self {
+            GraphFormat::Dot => "dot",
+            GraphFormat::Json => "json",
+            GraphFormat::Adjacency => "adj",
+            GraphFormat::Edges => "edges",
+        };
+        write!(f, "{}", output)
+    }
+}
 
 
 /// Writes a `petgraph::Graph` to a file in specified formats (DOT, JSON, Adjacency Matrix, or Edges List).
@@ -282,7 +297,7 @@ impl GraphJson {
 
         // Add edges using the stored edge data
         for edge in self.edges {
-            graph.add_edge(node_indices[edge.index], node_indices[edge.index], edge);
+            graph.add_edge(node_indices[edge.source], node_indices[edge.target], edge);
         }
 
         graph

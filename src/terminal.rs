@@ -3,6 +3,9 @@ use clap::{Args, Parser, Subcommand};
 
 use crate::mknn::GraphFormat;
 
+#[cfg(feature = "plot")]
+use crate::plot::PlotFormat;
+
 /// Netview
 #[derive(Debug, Parser)]
 #[command(author, version, about)]
@@ -19,7 +22,10 @@ pub enum Commands {
     /// Mutual nearest neighbor graph computation from a distance matrix
     Graph(GraphArgs),
     /// Pairwise distance matrix computation using 'skani'
-    Dist(DistArgs)
+    Dist(DistArgs),
+    #[cfg(feature = "plot")]
+    /// Plot a graph using the Netview plotting library
+    Plot(PlotArgs)
 }
 
 
@@ -41,6 +47,9 @@ pub struct GraphArgs {
     /// Include distances as edge weights in the graph
     #[clap(long, short = 'w')]
     pub weights: bool,
+    /// If output is an alignment matrix absence of an edge is 'NaN' instead of '0.0' 
+    #[clap(long, short = 'n')]
+    pub nan: bool,
     /// Graph output file
     #[clap(long, short = 'o', default_value="graph.json")]
     pub output: PathBuf,
@@ -81,6 +90,22 @@ pub struct DistArgs {
     /// Threads for distance matrix computation
     #[clap(long, short = 't', default_value = "8")]
     pub threads: usize,
+}
+
+
+#[cfg(feature = "plot")]
+#[derive(Debug, Args)]
+pub struct PlotArgs {
+    /// Netview graph in JSON format
+    #[clap(long, short = 'g', required = true)]
+    pub graph: PathBuf,
+    /// Output plot file
+    #[clap(long, short = 'o', default_value="netview.png")]
+    pub output: PathBuf,
+    /// Output plot format
+    #[clap(long, short = 'f', default_value="png")]
+    pub format: PlotFormat,
+
 }
 
 pub fn get_styles() -> clap::builder::Styles {

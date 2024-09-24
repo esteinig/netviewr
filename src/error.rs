@@ -1,4 +1,9 @@
 
+#[cfg(feature = "plot")]
+use plotters::prelude::DrawingAreaErrorKind;
+#[cfg(feature = "plot")]
+use plotters_bitmap::BitMapBackendError;
+
 use thiserror::Error;
 
 /// An error that can occur in k-nearest neighbor calculations.
@@ -44,4 +49,11 @@ pub enum NetviewError {
     ParseSkaniMatrix,
     #[error(transparent)]
     NeedletailParseError(#[from] needletail::errors::ParseError),
+
+    #[cfg(feature = "plot")]
+    #[error(transparent)]
+    PlottersBitmapError(#[from] plotters_bitmap::BitMapBackendError),
+    #[cfg(feature = "plot")]
+    #[error(transparent)]
+    PlottersDrawinAreaBitmapError(#[from] DrawingAreaErrorKind<BitMapBackendError>),
 }

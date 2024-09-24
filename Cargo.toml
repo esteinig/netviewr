@@ -38,6 +38,14 @@ serde_json = "1.0.115"
 regex = "1.10.6"
 needletail = "0.5.1"
 
+rand = { version = "0.8.5", optional = true }
+plotters = { version = "0.3.7", optional = true }
+plotters-bitmap = { version = "0.3.7", optional = true }
+
+[features]
+default = []
+plot = ["rand", "plotters", "plotters-bitmap"]
+
 [[bin]]
 name = "netview"
 path = "src/main.rs"

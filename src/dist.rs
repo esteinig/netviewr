@@ -40,7 +40,7 @@ pub fn extract_fasta_ids(fasta_path: &Path) -> Result<Vec<String>, NetviewError>
     Ok(sequence_ids)
 }
 
-pub fn read_ids(id_path: &Path) -> Result<Vec<String>, NetviewError> {
+pub fn parse_identifiers(id_path: &Path) -> Result<Vec<String>, NetviewError> {
     let reader = BufReader::new(File::open(id_path)?);
 
     // Create a vector to store identifiers

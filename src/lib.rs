@@ -5,6 +5,9 @@ pub mod terminal;
 pub mod log;
 pub mod netview;
 
+#[cfg(feature = "plot")]
+pub mod plot;
+
 pub mod prelude {
     pub use crate::netview::*;
     pub use crate::dist::*;
