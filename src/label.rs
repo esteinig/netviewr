@@ -119,7 +119,7 @@ pub fn label_propagation(
     weight_af: f64,
     weight_centrality: f64,
     neighbor_centrality_vote: bool,
-    scale_weight: bool,             // If distance weight in percent scale to 0 - 1
+    distance_percent: bool,         // If distance weight in percent e.g. from skani, standardize to 0 - 1
     query_nodes: Option<&[usize]>,  // Optional subset of nodes by indices
     propagate_on_unlabeled: bool    // Whether to propagate only on nodes without a label (None)
 ) -> NetviewGraph {
@@ -190,7 +190,7 @@ pub fn label_propagation(
                     let af = edge.af.unwrap_or(0.0) / 100.0;    // percent -> 0 - 1
 
 
-                    let weight = if scale_weight {
+                    let weight = if distance_percent {
                         1.0 - (edge.weight / 100.0)  // distance is percent -> similarity
                     } else {
                         1.0 - edge.weight            // distance -> similarity

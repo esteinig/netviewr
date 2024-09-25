@@ -73,11 +73,20 @@ pub struct LabelArgs {
     /// Centrality metric for nodes used in label propagation
     #[clap(long, short = 'c', default_value="degree")]
     pub centrality: NodeCentrality,
+    /// Maximum iterations or termination when no more labels change
+    #[clap(long, short = 'm', default_value="20")]
+    pub max_iterations: usize,
+    /// Use neighbor centrality in vote weight determination
+    #[clap(long, short = 'n')]
+    pub neighbor_centrality: bool,
+    /// Propagate labels for unlabelled nodes only
+    #[clap(long, short = 'u')]
+    pub unlabelled: bool,
     /// Propagated labels file in order of node indices
     #[clap(long, short = 'o', default_value="label.prop.csv")]
     pub output_labels: PathBuf,
     /// Netview graph with propagated labels in JSON format 
-    #[clap(long, short = 'o', default_value="netview.prop.json")]
+    #[clap(long, short = 'f', default_value="netview.prop.json")]
     pub output_graph: PathBuf,
 }
 

@@ -101,15 +101,15 @@ pub fn main() -> Result<(), NetviewError> {
             netview.label_propagation(
                 &mut graph,
                 NodeCentrality::Degree, 
-                10, 
+                args.max_iterations, 
                 1.0, 
                 1.0, 
                 1.0, 
                 3.0, 
-                false, 
+                args.neighbor_centrality, 
                 true, 
                 None, 
-                true
+                args.unlabelled
             );
 
             netview.write_labels(&graph, &args.output_labels)?;
