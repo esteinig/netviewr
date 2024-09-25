@@ -1,43 +1,28 @@
-use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use petgraph::{Graph, Undirected};
+use std::path::{Path, PathBuf};
+use std::ops::{Add, Sub};
+use std::cmp::Ordering;
 
+use crate::centrality::NodeCentrality;
 use crate::dist::{euclidean_distance_of_distances, parse_input_matrix, parse_identifiers, skani_distance_matrix};
 use crate::mknn::{convert_to_graph, k_mutual_nearest_neighbors, GraphJson};
+use crate::label::{label_nodes, label_propagation, write_labels_to_file};
 use crate::error::NetviewError;
 
 pub type NetviewGraph = Graph<NodeLabel, EdgeLabel, Undirected>;
 
-pub trait NetviewLabels {
-    fn label_nodes(&self, labels: Vec<Option<String>>) -> Result<(), NetviewError>;
-}
-
-impl NetviewLabels for NetviewGraph {
-    fn label_nodes(&self, labels: Vec<Option<String>>) -> Result<(), NetviewError> {
-        
-        log::info!("Labelling nodes on NetviewGraph");
-        
-
-        Ok(())
-    }
-}
-
-
 pub struct Netview {
-    pub graph: NetviewGraph
 }
 
 impl Netview {
     pub fn new() -> Self {
         Self {
-            graph: NetviewGraph::new_undirected()
         }
     }
-    pub fn from_json(path: &Path) -> Result<Self, NetviewError> {
-        Ok(Self {
-            graph: GraphJson::read(path)?.into_graph()
-        })
+    pub fn from_json(&self, path: &Path) -> Result<NetviewGraph, NetviewError> {
+        Ok(GraphJson::read(path)?.into_graph())
     }
     pub fn skani_distance(
         &self,
@@ -59,8 +44,6 @@ impl Netview {
             small_genomes
         )
     }
-
-    /// Main version of the graph method that parses the distance and alignment fraction matrices from file paths.
     pub fn graph_from_files(
         &self, 
         dist_matrix: &PathBuf, 
@@ -68,7 +51,7 @@ impl Netview {
         af_matrix: Option<PathBuf>, 
         identifiers: Option<PathBuf>,
         is_csv: bool
-    ) -> Result<Graph<NodeLabel, EdgeLabel, Undirected>, NetviewError> {
+    ) -> Result<NetviewGraph, NetviewError> {
         
         log::info!("Reading distance matrix: {}", dist_matrix.display());
         let distance = parse_input_matrix(dist_matrix, is_csv)?;
@@ -110,18 +93,15 @@ impl Netview {
 
         Ok(mknn_graph)
     }
-
-    /// Alternative version of the graph method that takes the distance and alignment fraction matrices directly.
     pub fn graph_from_vecs(
         &self, 
         dist_matrix: Vec<Vec<f64>>, 
         k: usize, 
         af_matrix: Option<Vec<Vec<f64>>>,
         ids: Option<Vec<String>>
-    ) -> Result<Graph<NodeLabel, EdgeLabel, Undirected>, NetviewError> {
+    ) -> Result<NetviewGraph, NetviewError> {
         
-        log::info!("Received distance matrix directly.");
-
+        log::info!("Computing Euclidean distance abstraction...");
         let distance_of_distances = euclidean_distance_of_distances(
             &dist_matrix, 
             false, 
@@ -143,6 +123,43 @@ impl Netview {
         )?;
 
         Ok(mknn_graph)
+    }
+    pub fn label_nodes(&self, graph: &mut NetviewGraph, labels: Vec<Option<String>>) -> Result<(), NetviewError> {
+        log::info!("Labelling nodes on graph (n = {})", labels.len());
+        label_nodes(graph, labels)
+    }
+    pub fn write_labels(&self, graph: &NetviewGraph, path: &Path) -> Result<(), NetviewError> {
+        log::info!("Writing graph labels to file: {}", path.display());
+        write_labels_to_file(&graph, path, false)
+    }
+    pub fn label_propagation(
+        &self,
+        graph: &mut NetviewGraph,
+        centrality_metric: NodeCentrality,
+        max_iterations: usize,
+        weight_ani: f64,
+        weight_aai: f64,
+        weight_af: f64,
+        weight_centrality: f64,
+        neighbor_centrality_vote: bool,
+        scale_weight: bool,             // If distance weight in percent scale to 0 - 1
+        query_nodes: Option<&[usize]>,  // Optional subset of nodes by indices
+        propagate_on_unlabeled: bool    // Whether to propagate only on nodes without a label (None)
+    ) -> NetviewGraph {
+
+        label_propagation(
+            graph, 
+            centrality_metric,
+            max_iterations, 
+            weight_ani, 
+            weight_aai, 
+            weight_af,
+            weight_centrality, 
+            neighbor_centrality_vote,
+            scale_weight,
+            query_nodes,
+            propagate_on_unlabeled
+        )
     }
 }
 
@@ -210,7 +227,7 @@ impl NodeLabelBuilder {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct EdgeLabel {
     pub index: usize,              // Original edge index
     pub source: usize,             // Node source index
@@ -283,6 +300,65 @@ impl EdgeLabelBuilder {
             ani: self.ani,
             aai: self.aai,
             af: self.af,
+        }
+    }
+}
+
+
+impl Add for EdgeLabel {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self::Output {
+        EdgeLabel {
+            weight: self.weight + other.weight,
+            ..self
+        }
+    }
+}
+
+impl Sub for EdgeLabel {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self::Output {
+        EdgeLabel {
+            weight: self.weight - other.weight,
+            ..self
+        }
+    }
+}
+
+// Implementing the trait Measure for Dijkstra's algorithm
+impl Ord for EdgeLabel {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap_or(Ordering::Equal)
+    }
+}
+
+impl PartialOrd for EdgeLabel {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.weight.partial_cmp(&other.weight)
+    }
+}
+
+impl Eq for EdgeLabel {}
+
+impl PartialEq for EdgeLabel {
+    fn eq(&self, other: &Self) -> bool {
+        self.weight == other.weight
+    }
+}
+
+// Implement default measure behavior
+impl Default for EdgeLabel {
+    fn default() -> Self {
+        EdgeLabel {
+            index: 0,
+            source: 0,
+            target: 0,
+            weight: 0.0,
+            ani: None,
+            aai: None,
+            af: None,
         }
     }
 }

@@ -39,7 +39,7 @@ pub enum NetviewError {
     GraphDeserializationError(String),
     #[error("Error writing to file: {0}")]
     WriteError(String),
-    #[error("CSV serialization error: {0}")]
+    #[error("CSV error: {0}")]
     CsvError(#[from] csv::Error),
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
@@ -47,6 +47,10 @@ pub enum NetviewError {
     NodeIndexError,
     #[error("Failed to parse `skani` output matrix into symmetrical distance matrix")]
     ParseSkaniMatrix,
+    #[error("Failed to find node with index {0} in the graph")]
+    NodeNotFoundError(usize),
+    #[error("Number of labels must be the same as number of nodes in the graph ({0})")]
+    NodeLabelLengthError(usize),
     #[error(transparent)]
     NeedletailParseError(#[from] needletail::errors::ParseError),
 

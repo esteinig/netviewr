@@ -2,10 +2,12 @@
 #![allow(unused_variables)]
 #![allow(unreachable_code)]
 
+use netview::centrality::NodeCentrality;
 #[cfg(feature = "plot")]
 use netview::plot::plot_test;
 
 use netview::dist::{skani_distance_matrix, write_ids, write_matrix_to_file};
+use netview::label::read_labels_from_file;
 use netview::mknn::write_graph_to_file;
 use netview::log::init_logger;
 
@@ -80,6 +82,41 @@ pub fn main() -> Result<(), NetviewError> {
                 log::info!("Writing sequence identifiers to: {}", path.display());
                 write_ids(ids, &path)?;
             }
+        },
+        Commands::Label(args) => {
+
+            let netview = Netview::new();
+
+            let mut graph = netview.from_json(&args.graph)?;
+
+            log::info!("Reading labels from file...");
+            let labels: Vec<Option<String>> = read_labels_from_file(&args.labels, false)?
+                .into_iter()
+                .map(|g| g.label)
+                .collect();
+
+            log::info!("Decorating nodes with labels...");
+            netview.label_nodes(&mut graph, labels)?;
+
+            netview.label_propagation(
+                &mut graph,
+                NodeCentrality::Degree, 
+                10, 
+                1.0, 
+                1.0, 
+                1.0, 
+                3.0, 
+                false, 
+                true, 
+                None, 
+                true
+            );
+
+            netview.write_labels(&graph, &args.output_labels)?;
+
+
+
+            
         },
 
         #[cfg(feature = "plot")]

@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand};
 
-use crate::mknn::GraphFormat;
+use crate::{centrality::NodeCentrality, mknn::GraphFormat};
 
 #[cfg(feature = "plot")]
 use crate::plot::PlotFormat;
@@ -23,6 +23,8 @@ pub enum Commands {
     Graph(GraphArgs),
     /// Pairwise distance matrix computation using 'skani'
     Dist(DistArgs),
+    /// Label propagation to predict node labels on a graph
+    Label(LabelArgs),
     #[cfg(feature = "plot")]
     /// Plot a graph using the Netview plotting library
     Plot(PlotArgs)
@@ -56,6 +58,27 @@ pub struct GraphArgs {
     /// Output format for graph
     #[clap(long, short = 'f', default_value="json")]
     pub format: GraphFormat,
+}
+
+
+
+#[derive(Debug, Args)]
+pub struct LabelArgs {
+    /// Netview graph in JSON format
+    #[clap(long, short = 'g', required = true)]
+    pub graph: PathBuf,
+    /// Label file in order of node indices
+    #[clap(long, short = 'l', required = true)]
+    pub labels: PathBuf,
+    /// Centrality metric for nodes used in label propagation
+    #[clap(long, short = 'c', default_value="degree")]
+    pub centrality: NodeCentrality,
+    /// Propagated labels file in order of node indices
+    #[clap(long, short = 'o', default_value="label.prop.csv")]
+    pub output_labels: PathBuf,
+    /// Netview graph with propagated labels in JSON format 
+    #[clap(long, short = 'o', default_value="netview.prop.json")]
+    pub output_graph: PathBuf,
 }
 
 #[derive(Debug, Args)]

@@ -4,6 +4,8 @@ pub mod mknn;
 pub mod terminal;
 pub mod log;
 pub mod netview;
+pub mod label;
+pub mod centrality;
 
 #[cfg(feature = "plot")]
 pub mod plot;
