@@ -6,23 +6,123 @@ use std::ops::{Add, Sub};
 use std::cmp::Ordering;
 
 use crate::centrality::NodeCentrality;
-use crate::dist::{euclidean_distance_of_distances, parse_input_matrix, parse_identifiers, skani_distance_matrix};
-use crate::mknn::{convert_to_graph, k_mutual_nearest_neighbors, GraphJson};
-use crate::label::{label_nodes, label_propagation, write_labels_to_file};
+use crate::config::NetviewConfig;
+use crate::dist::{euclidean_distance_of_distances, parse_identifiers, parse_input_matrix, skani_distance_matrix, write_ids, write_matrix_to_file};
+use crate::mknn::{convert_to_graph, k_mutual_nearest_neighbors, write_graph_to_file, GraphFormat, GraphJson};
+use crate::label::{label_nodes, label_propagation, read_labels_from_file, write_graph_labels_to_file, VoteWeights};
 use crate::error::NetviewError;
+use crate::utils::{concatenate_fasta_files, get_ids_from_fasta_files};
 
 pub type NetviewGraph = Graph<NodeLabel, EdgeLabel, Undirected>;
 
 pub struct Netview {
+    config: NetviewConfig
+}
+
+pub struct NetviewPredictFiles {
+    data: PathBuf,
+    label: PathBuf,
+    dist: PathBuf,
+    af: PathBuf,
+    id: PathBuf,
+    graph_json: PathBuf,
+    graph_edges: PathBuf,
+    graph_predict: PathBuf,
+    label_predict: PathBuf,
+}
+impl NetviewPredictFiles {
+    fn from(outdir: &PathBuf, name: String) -> Self {
+        Self {
+            data: outdir.join(format!("{name}.fasta")),
+            label: outdir.join(format!("{name}.csv")),
+            dist: outdir.join(format!("{name}.dist")),
+            af: outdir.join(format!("{name}.af")),
+            id: outdir.join(format!("{name}.id")),
+            graph_json: outdir.join(format!("{name}.json")),
+            graph_edges: outdir.join(format!("{name}.edges")),
+            graph_predict: outdir.join(format!("{name}.predict.json")),
+            label_predict: outdir.join(format!("{name}.predict.csv")),
+        }
+    }
 }
 
 impl Netview {
-    pub fn new() -> Self {
-        Self {
-        }
+    pub fn new(config: NetviewConfig) -> Self {
+        Self { config }
     }
-    pub fn from_json(&self, path: &Path) -> Result<NetviewGraph, NetviewError> {
+    pub fn read_json_graph(&self, path: &Path) -> Result<NetviewGraph, NetviewError> {
         Ok(GraphJson::read(path)?.into_graph())
+    }
+    pub fn predict(
+        &self, 
+        fasta: &Vec<PathBuf>, 
+        db: &PathBuf, 
+        labels: &PathBuf, 
+        k: usize, 
+        outdir: &PathBuf,
+        propagate_all: bool,
+        basename: String,
+        threads: usize
+    ) -> Result<(), NetviewError> {
+        
+        if !outdir.exists() {
+            std::fs::create_dir_all(&outdir)?;
+        }
+
+        let files = NetviewPredictFiles::from(outdir, basename);
+        let fasta_ids = get_ids_from_fasta_files(&fasta)?; // seq ids for prediction
+       
+        concatenate_fasta_files(db, fasta, &files.data)?;
+
+        let (dist, af, ids) = self.skani_distance(
+            &files.data,
+            self.config.skani.marker_compression_factor,
+            self.config.skani.compression_factor,
+            threads,
+            self.config.skani.min_percent_identity,
+            self.config.skani.min_alignment_fraction,
+            self.config.skani.small_genomes
+        )?;
+
+        write_matrix_to_file(&dist, &files.dist)?;
+        write_matrix_to_file(&af, &files.af)?;
+        write_ids(&ids, &files.id)?;
+
+        let mut graph = self.graph_from_vecs(
+            dist, k, Some(af), Some(ids)
+        )?;
+
+        let db_labels: Vec<Option<String>> = read_labels_from_file(&labels, false)?
+            .into_iter()
+            .map(|g| g.label)
+            .collect();
+
+        // Add unknowns to labels for prediction, this is a bit hacky right now...
+        let mut labels = db_labels.clone();
+        for _ in &fasta_ids { labels.push(None) };
+
+        self.label_nodes(&mut graph, labels)?;
+        self.write_labels(&graph, &files.label)?;
+
+        write_graph_to_file(&graph, &files.graph_json, &GraphFormat::Json, true)?;
+        write_graph_to_file(&graph, &files.graph_edges, &GraphFormat::Edges, false)?;
+
+        self.label_propagation(
+            &mut graph,
+            self.config.label.centrality_metric.clone(), 
+            self.config.label.max_iterations, 
+            self.config.label.vote_weights.clone(),
+            self.config.label.neighbor_centrality_vote, 
+            true, 
+            if propagate_all { None } else { Some(fasta_ids) }, 
+            false
+        );
+
+        write_graph_to_file(&graph, &files.graph_predict, &GraphFormat::Json, true)?;
+        self.write_labels(&graph, &files.label_predict)?;
+
+        Ok(())
+
     }
     pub fn skani_distance(
         &self,
@@ -70,7 +170,7 @@ impl Netview {
             None
         };
 
-        log::info!("Computing Euclidean distance abstraction...");
+        log::info!("Computing Euclidean distance abstraction matrix");
         let distance_of_distances = euclidean_distance_of_distances(
             &distance, 
             false, 
@@ -78,7 +178,7 @@ impl Netview {
             None
         )?;
         
-        log::info!("Computing mutual nearest neighbor graph...");
+        log::info!("Computing mutual nearest neighbor graph (k = {k})");
         let mutual_nearest_neighbors = k_mutual_nearest_neighbors(
             &distance_of_distances, 
             k
@@ -101,15 +201,16 @@ impl Netview {
         ids: Option<Vec<String>>
     ) -> Result<NetviewGraph, NetviewError> {
         
-        log::info!("Computing Euclidean distance abstraction...");
+
+        log::info!("Computing Euclidean distance abstraction matrix");
         let distance_of_distances = euclidean_distance_of_distances(
             &dist_matrix, 
             false, 
             false, 
             None
         )?;
-
-        log::info!("Computing mutual nearest neighbor graph...");
+        
+        log::info!("Computing mutual nearest neighbor graph (k = {k})");
         let mutual_nearest_neighbors = k_mutual_nearest_neighbors(
             &distance_of_distances, 
             k
@@ -124,42 +225,36 @@ impl Netview {
 
         Ok(mknn_graph)
     }
-    pub fn label_nodes(&self, graph: &mut NetviewGraph, labels: Vec<Option<String>>) -> Result<(), NetviewError> {
-        log::info!("Labelling nodes on graph (n = {})", labels.len());
-        label_nodes(graph, labels)
-    }
-    pub fn write_labels(&self, graph: &NetviewGraph, path: &Path) -> Result<(), NetviewError> {
-        log::info!("Writing graph labels to file: {}", path.display());
-        write_labels_to_file(&graph, path, false)
-    }
     pub fn label_propagation(
         &self,
         graph: &mut NetviewGraph,
         centrality_metric: NodeCentrality,
         max_iterations: usize,
-        weight_ani: f64,
-        weight_aai: f64,
-        weight_af: f64,
-        weight_centrality: f64,
+        vote_weights: VoteWeights,
         neighbor_centrality_vote: bool,
-        scale_weight: bool,             // If distance weight in percent scale to 0 - 1
-        query_nodes: Option<&[usize]>,  // Optional subset of nodes by indices
-        propagate_on_unlabeled: bool    // Whether to propagate only on nodes without a label (None)
+        distance_percent: bool,             // If distance weight in percent scale to 0 - 1
+        query_nodes: Option<Vec<String>>,   // Optional subset of nodes by identifiers
+        propagate_on_unlabeled: bool        // Whether to propagate only on nodes without a label (None)
     ) -> NetviewGraph {
 
         label_propagation(
             graph, 
             centrality_metric,
             max_iterations, 
-            weight_ani, 
-            weight_aai, 
-            weight_af,
-            weight_centrality, 
+            vote_weights,
             neighbor_centrality_vote,
-            scale_weight,
+            distance_percent,
             query_nodes,
             propagate_on_unlabeled
         )
+    }
+    pub fn label_nodes(&self, graph: &mut NetviewGraph, labels: Vec<Option<String>>) -> Result<(), NetviewError> {
+        log::info!("Labelling nodes on graph (n = {})", labels.len());
+        label_nodes(graph, labels)
+    }
+    pub fn write_labels(&self, graph: &NetviewGraph, path: &Path) -> Result<(), NetviewError> {
+        log::info!("Writing graph labels to: {}", path.display());
+        write_graph_labels_to_file(&graph, path, false)
     }
 }
 

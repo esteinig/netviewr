@@ -5,7 +5,11 @@ pub mod terminal;
 pub mod log;
 pub mod netview;
 pub mod label;
+pub mod utils;
 pub mod centrality;
+pub mod validation;
+pub mod config;
+pub mod derep;
 
 #[cfg(feature = "plot")]
 pub mod plot;

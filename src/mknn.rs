@@ -223,7 +223,7 @@ where
     EdgeLabel: Serialize + std::clone::Clone + std::fmt::Debug,
 {
     
-    log::info!("Writing graph to output file: {}", path.display());
+    log::info!("Writing graph to: {}", path.display());
     let mut file = File::create(path).map_err(|e| NetviewError::GraphFileError(e.to_string()))?;
 
     match format {

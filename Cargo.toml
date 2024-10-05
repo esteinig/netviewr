@@ -37,14 +37,15 @@ petgraph = { version = "0.6.4", features = ["serde", "serde_derive"] }
 serde_json = "1.0.115"
 regex = "1.10.6"
 needletail = "0.5.1"
+rand = "0.8.5"
 
-rand = { version = "0.8.5", optional = true }
 plotters = { version = "0.3.7", optional = true }
 plotters-bitmap = { version = "0.3.7", optional = true }
+toml = "0.8.19"
 
 [features]
 default = []
-plot = ["rand", "plotters", "plotters-bitmap"]
+plot = ["plotters", "plotters-bitmap"]
 
 [[bin]]
 name = "netview"

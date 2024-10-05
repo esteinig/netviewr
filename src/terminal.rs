@@ -19,18 +19,57 @@ pub struct App {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// Mutual nearest neighbor graph computation from a distance matrix
-    Graph(GraphArgs),
+    /// Predict target labels using sparse k-mer chaining and population graphs
+    Predict(PredictArgs),
     /// Pairwise distance matrix computation using 'skani'
     Dist(DistArgs),
+    /// Mutual nearest neighbor population graph computation 
+    Graph(GraphArgs),
     /// Label propagation to predict node labels on a graph
     Label(LabelArgs),
+    /// Stratified label-based dereplication of input sequences 
+    Derep(DerepArgs),
+    /// Stratified k-fold cross-validation for prediction
+    Xval(CrossValidationArgs),
     #[cfg(feature = "plot")]
     /// Plot a graph using the Netview plotting library
     Plot(PlotArgs)
 }
 
 
+#[derive(Debug, Args)]
+pub struct PredictArgs {
+    /// Genomes for prediction as single for multiple files (.fasta)
+    #[clap(long, short = 'f', num_args(0..), required=true)]
+    pub fasta: Vec<PathBuf>,
+    /// Reference database sequences (.fasta)
+    #[clap(long, short = 'd', required=true)]
+    pub db: PathBuf,
+    /// Database labels, in order of database genomes (.csv)
+    #[clap(long, short = 'l', required = true)]
+    pub labels: PathBuf,
+    /// Output directory of working data and results
+    #[clap(long, short = 'o', default_value="netview")]
+    pub outdir: PathBuf,
+    /// K parameter for mutual nearest neighbor algorithm
+    #[clap(long = "mknn", short = 'k', num_args(0..), default_value="20")]
+    pub k: usize,
+    /// Configuration as TOML file (.toml)
+    #[clap(long, short = 't')]
+    pub toml: Option<PathBuf>,
+    /// Configuration as JSON file (.json)
+    #[clap(long, short = 'j')]
+    pub json: Option<PathBuf>,
+    /// Propagate all labels across the graph topology
+    #[clap(long, short = 'a')]
+    pub all: bool,
+    /// Basename of output files in output folder
+    #[clap(long, short = 'n', default_value="netview")]
+    pub basename: String,
+    /// Threads for distance matrix computations
+    #[clap(long, short = 't', default_value = "4")]
+    pub threads: usize,
+}
 
 #[derive(Debug, Args)]
 pub struct GraphArgs {
@@ -60,8 +99,6 @@ pub struct GraphArgs {
     pub format: GraphFormat,
 }
 
-
-
 #[derive(Debug, Args)]
 pub struct LabelArgs {
     /// Netview graph in JSON format
@@ -71,7 +108,7 @@ pub struct LabelArgs {
     #[clap(long, short = 'l', required = true)]
     pub labels: PathBuf,
     /// Centrality metric for nodes used in label propagation
-    #[clap(long, short = 'c', default_value="degree")]
+    #[clap(long, short = 'c', default_value="betweenness")]
     pub centrality: NodeCentrality,
     /// Maximum iterations or termination when no more labels change
     #[clap(long, short = 'm', default_value="20")]
@@ -82,12 +119,63 @@ pub struct LabelArgs {
     /// Propagate labels for unlabelled nodes only
     #[clap(long, short = 'u')]
     pub unlabelled: bool,
+    /// Propagate labels for query nodes only
+    #[clap(long, short = 'q', num_args(0..))]
+    pub query: Option<Vec<String>>,
     /// Propagated labels file in order of node indices
     #[clap(long, short = 'o', default_value="label.prop.csv")]
     pub output_labels: PathBuf,
     /// Netview graph with propagated labels in JSON format 
     #[clap(long, short = 'f', default_value="netview.prop.json")]
     pub output_graph: PathBuf,
+}
+
+
+#[derive(Debug, Args)]
+pub struct CrossValidationArgs {
+    /// Genomes for cross-validation dataset (.fasta)
+    #[clap(long, short = 'f')]
+    pub fasta: PathBuf,
+    /// Label file in order of genomes (.csv)
+    #[clap(long, short = 'l', required = true)]
+    pub labels: PathBuf,
+    /// Number of cross-validation folds
+    #[clap(long, short = 'k', default_value="5")]
+    pub k_folds: usize,
+    /// Minimum sequence length to be included
+    #[clap(long, short = 'm', default_value="0")]
+    pub min_length: usize,
+    /// Limit the number of sampled genomes  
+    #[clap(long, short = 'n')]
+    pub max_per_label: Option<usize>,
+    /// Output directory for validation data and operations
+    #[clap(long, short = 'o')]
+    pub outdir: PathBuf,
+}
+
+#[derive(Debug, Args)]
+pub struct DerepArgs {
+    /// Genomes for replication by label (.fasta)
+    #[clap(long, short = 'f', required = true)]
+    pub fasta: PathBuf,
+    /// Label file in order of genomes (.csv)
+    #[clap(long, short = 'l', required = true)]
+    pub labels: PathBuf,
+    /// Exclude these labels, all unlabelled are excluded by default
+    #[clap(long, short = 'e', required = false, num_args(0..), default_value="Vec::new()")]
+    pub exclude: Vec<String>,
+    /// Minimum sequence length to be included
+    #[clap(long, short = 'm', default_value="0")]
+    pub min_length: usize,
+    /// Limit number of dereplicated genomes per label
+    #[clap(long, short = 'n', default_value="20")]
+    pub max_per_label: usize,
+    /// Output dereplicated sequences
+    #[clap(long, short = 'o', required = true)]
+    pub output_fasta: PathBuf,
+    /// Output dereplicated labels
+    #[clap(long, short = 's', required = true)]
+    pub output_labels: PathBuf,
 }
 
 #[derive(Debug, Args)]

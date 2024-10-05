@@ -14,7 +14,7 @@ use crate::centrality::NodeCentrality;
 use crate::error::NetviewError;
 use crate::netview::NetviewGraph;
 
-
+#[derive(Eq, Hash, PartialEq)]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Label {
     pub id: String,
@@ -39,8 +39,8 @@ pub fn read_labels_from_file<P: AsRef<Path>>(
 }
 
 
-// Function to write the labels to a file
-pub fn write_labels_to_file<P: AsRef<Path>>(
+// Function to write the labels from a graph to a file
+pub fn write_graph_labels_to_file<P: AsRef<Path>>(
     graph: &NetviewGraph,        
     output_file: P,                
     tsv: bool                      
@@ -78,6 +78,37 @@ pub fn write_labels_to_file<P: AsRef<Path>>(
 }
 
 
+// Function to write the labels to a file
+pub fn write_labels_to_file<P: AsRef<Path>>(
+    labels: &Vec<Label>,        
+    output_file: P,                
+    tsv: bool                      
+) -> Result<(), NetviewError> {
+
+    // Open the output file for writing
+    let file = File::create(output_file)?;
+    
+    // Use the csv::WriterBuilder to set the delimiter (tab for TSV, comma for CSV)
+    let mut wtr = if tsv {
+        WriterBuilder::new().delimiter(b'\t').from_writer(file)
+    } else {
+        WriterBuilder::new().from_writer(file)
+    };
+
+    // Iterate over each node in the graph and extract the id and label
+    for label in labels {
+        // Write the label to the file
+        wtr.serialize(label)?;
+    }
+
+    // Flush the writer to ensure all data is written to the file
+    wtr.flush()?;
+
+    Ok(())
+}
+
+
+
 pub fn label_nodes(graph: &mut NetviewGraph, labels: Vec<Option<String>>) -> Result<(), NetviewError> {
         
     // Check that the number of labels matches the number of nodes in the graph
@@ -109,34 +140,49 @@ pub fn label_nodes(graph: &mut NetviewGraph, labels: Vec<Option<String>>) -> Res
     Ok(())
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VoteWeights {
+    centrality: f64,      // centrality metric in label propagation vote
+    weight: f64,          // input distance -> similarity
+    af: f64,              // alignment fraction from skani
+    ani: f64,             // blast ani from vircov 
+    aai: f64,             // blast aai from vircov
+}
+
+impl Default for VoteWeights {
+    fn default() -> Self {
+        Self {
+            centrality: 1.0,
+            weight: 2.0,
+            af: 1.0,
+            ani: 0.0,
+            aai: 0.0
+        }
+    }
+}
+
 // Function to propagate labels based on weighted voting using the node labels in the graph
 pub fn label_propagation(
     graph: &mut NetviewGraph, 
     centrality_metric: NodeCentrality,
     max_iterations: usize,
-    weight_ani: f64,
-    weight_aai: f64,
-    weight_af: f64,
-    weight_centrality: f64,
+    vote_weights: VoteWeights,
     neighbor_centrality_vote: bool,
-    distance_percent: bool,         // If distance weight in percent e.g. from skani, standardize to 0 - 1
-    query_nodes: Option<&[usize]>,  // Optional subset of nodes by indices
-    propagate_on_unlabeled: bool    // Whether to propagate only on nodes without a label (None)
+    distance_percent: bool,            // If distance weight in percent e.g. from skani, standardize to 0 - 1
+    query_nodes: Option<Vec<String>>,  // Optional subset of nodes by identifiers
+    propagate_on_unlabeled: bool       // Whether to propagate only on nodes without a label (None)
 ) -> NetviewGraph {
     // Compute centrality using the previously defined function
 
-    log::info!("Starting label propagation with at most {} iterations or stop if no label has changed.", max_iterations);
-    log::info!("Weighting factors - ANI: {}, AAI: {}, AF: {}, Centrality: {}", weight_ani, weight_aai, weight_af, weight_centrality);
+    log::info!("Starting label propagation (max iter = {})", max_iterations);
+    log::info!("ANI: {}, AAI: {}, AF: {}, 1-DIST: {}, CENTR: {}", vote_weights.ani, vote_weights.aai, vote_weights.af, vote_weights.weight, vote_weights.centrality);
 
-    log::info!("Computing centrality measure for all nodes in the graph ({centrality_metric}).");
+    log::info!("Computing node centrality ({centrality_metric})");
     let centrality: HashMap<usize, f64> = match centrality_metric {
         NodeCentrality::Betweenness => betweenness_centrality(graph, true),
         NodeCentrality::Degree => degree_centrality(graph, true),
         NodeCentrality::Closeness => closeness_centrality(graph, true),
     };
-        
-    log::info!("Centrality computation completed.");
-
 
     // Generate the subset of nodes based on the input options
     let target_nodes: Vec<NodeIndex> = if propagate_on_unlabeled {
@@ -144,18 +190,27 @@ pub fn label_propagation(
         graph.node_indices()
                 .filter(|node| graph.node_weight(*node).unwrap().label.is_none())
                 .collect()
-    } else if let Some(indices) = query_nodes {
-        // Use the provided subset if propagate_on_unlabeled is false
-        indices.iter().filter_map(|&idx| graph.node_indices().find(|&n| n.index() == idx)).collect()
+    } else if let Some(ids) = query_nodes {
+        // Use the provided query_nodes (based on identifiers in NodeLabel)
+        graph.node_indices()
+        .filter(|&node| {
+            if let Some(node_label) = graph.node_weight(node) {
+                // Check if the node's id is in the query_nodes
+                node_label.id.as_ref().map_or(false, |id| ids.contains(id))
+            } else {
+                false
+            }
+        })
+        .collect()
     } else {
         // If no subset is provided, use all nodes
         graph.node_indices().collect()
     };
 
-    log::info!("Labelling {} target nodes with label propagation algorithm", target_nodes.len());
+    log::info!("Targeting {} nodes with label propagation", target_nodes.len());
 
     for iter in 0..max_iterations {
-        log::info!("Starting iteration {} of label propagation.", iter + 1);
+        log::debug!("Starting iteration {} of label propagation.", iter + 1);
         let mut new_labels = HashMap::new();
         let mut label_changed = false;  // Track if any label changes
 
@@ -197,7 +252,7 @@ pub fn label_propagation(
                     };
                     
                     log::debug!(
-                        "Neighbor (index: {}) has label '{}'. Edge weights: WEIGHT = {:.4}, ANI = {:.4}, AAI = {:.4}, AF = {:.4}, CENTR = {:.4}",
+                        "Neighbor (index: {}) has label '{}'. Edge weights: ANI = {:.4}, AAI = {:.4}, AF = {:.4}, 1-DIST = {:.4}, CENTR = {:.4}",
                         neighbor.index(),
                         neighbor_label_value,
                         weight,
@@ -208,11 +263,11 @@ pub fn label_propagation(
                     );
 
                     // Calculate the vote weight for the neighbor's label
-                    let mut vote_weight = weight               // input similarity
-                        + (weight_ani * ani)                        // ani distance if provided
-                        + (weight_aai * aai)                        // aai distance if provided
-                        + (weight_af * af)                          // alignment fraction if provided
-                        + (weight_centrality * node_centrality);    // node centrality
+                    let mut vote_weight = (weight * vote_weights.weight)             
+                        + (vote_weights.ani * ani)                   
+                        + (vote_weights.aai * aai)                        
+                        + (vote_weights.af * af)                         
+                        + (vote_weights.centrality * node_centrality);
                     
                     // Optionally include neighbor centrality in the vote
                     if neighbor_centrality_vote {
@@ -257,6 +312,6 @@ pub fn label_propagation(
         }
     }
 
-    log::info!("Returning graph with updated node labels from label propagation.");
+    log::info!("Returning graph with updated node labels");
     graph.clone()
 }

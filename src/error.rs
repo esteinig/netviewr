@@ -53,7 +53,15 @@ pub enum NetviewError {
     NodeLabelLengthError(usize),
     #[error(transparent)]
     NeedletailParseError(#[from] needletail::errors::ParseError),
-
+    #[error(transparent)]
+    Utf8Error(#[from] std::str::Utf8Error),
+    #[error("Failed to parse JSON: {0}")]
+    Json(#[from] serde_json::Error),
+    #[error("Failed to parse TOML: {0}")]
+    Toml(#[from] toml::de::Error),
+    #[error("Failed to serialize TOML: {0}")]
+    TomlSerialize(#[from] toml::ser::Error),
+    
     #[cfg(feature = "plot")]
     #[error(transparent)]
     PlottersBitmapError(#[from] plotters_bitmap::BitMapBackendError),

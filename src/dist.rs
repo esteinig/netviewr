@@ -1,14 +1,16 @@
 extern crate rayon;
 
 use csv::{ReaderBuilder, Trim};
+use itertools::Itertools;
 use needletail::parse_fastx_file;
 use regex::Regex;
 use serde::Deserialize;
+use std::collections::HashSet;
 use std::fs::File;
-use std::io::BufWriter;
-use std::io::Write;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::io::BufWriter;
+use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
@@ -30,7 +32,7 @@ pub fn extract_fasta_ids(fasta_path: &Path) -> Result<Vec<String>, NetviewError>
 
         // Convert the full header to a string and split by whitespace
         let full_header = String::from_utf8_lossy(record.id());
-        
+
         // Extract the part before the first space (the sequence ID)
         if let Some(seq_id) = full_header.split_whitespace().next() {
             sequence_ids.push(seq_id.to_string());
@@ -54,8 +56,7 @@ pub fn parse_identifiers(id_path: &Path) -> Result<Vec<String>, NetviewError> {
     Ok(ids)
 }
 
-
-pub fn write_ids(ids: Vec<String>, file: &Path) -> Result<(), NetviewError> {
+pub fn write_ids(ids: &Vec<String>, file: &Path) -> Result<(), NetviewError> {
     let mut writer = BufWriter::new(File::create(file)?);
 
     for id in ids {
@@ -76,7 +77,7 @@ pub fn write_ids(ids: Vec<String>, file: &Path) -> Result<(), NetviewError> {
 /// # Examples
 ///
 /// ```
-/// use vircov::subtype::skani_distance_matrix;
+/// use netview::subtype::skani_distance_matrix;
 ///
 /// let result = skani_distance_matrix();
 /// match result {
@@ -85,50 +86,70 @@ pub fn write_ids(ids: Vec<String>, file: &Path) -> Result<(), NetviewError> {
 /// }
 /// ```
 pub fn skani_distance_matrix(
-    fasta: &Path, 
-    marker_compression_factor: usize, 
-    compression_factor: usize, 
+    fasta: &Path,
+    marker_compression_factor: usize,
+    compression_factor: usize,
     threads: usize,
     min_percent_identity: f64,
     min_alignment_fraction: f64,
-    small_genomes: bool
+    small_genomes: bool,
 ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<String>), NetviewError> {
-
     let args = if small_genomes {
         vec![
-            String::from("triangle"), 
-            "-i".to_string(), fasta.display().to_string(),
-            "-t".to_string(), format!("{}", threads), 
-            "-s".to_string(), format!("{:.2}", min_percent_identity),
-            "--min-af".to_string(), format!("{:.2}", min_alignment_fraction),
-            String::from("--full-matrix"), 
-            String::from("--distance"), 
-            String::from("--small-genomes"), 
+            String::from("triangle"),
+            "-i".to_string(),
+            fasta.display().to_string(),
+            "-t".to_string(),
+            format!("{}", threads),
+            "-s".to_string(),
+            format!("{:.2}", min_percent_identity),
+            "--min-af".to_string(),
+            format!("{:.2}", min_alignment_fraction),
+            String::from("--full-matrix"),
+            String::from("--distance"),
+            String::from("--small-genomes"),
         ]
     } else {
         vec![
-            String::from("triangle"), 
-            "-i".to_string(), fasta.display().to_string(),
-            "-m".to_string(), format!("{}", marker_compression_factor), 
-            "-c".to_string(), format!("{}", compression_factor), 
-            "-t".to_string(), format!("{}", threads), 
-            "-s".to_string(), format!("{:.2}", min_percent_identity),
-            "--min-af".to_string(), format!("{:.2}", min_alignment_fraction),
-            String::from("--full-matrix"), 
-            String::from("--distance"), 
+            String::from("triangle"),
+            "-i".to_string(),
+            fasta.display().to_string(),
+            "-m".to_string(),
+            format!("{}", marker_compression_factor),
+            "-c".to_string(),
+            format!("{}", compression_factor),
+            "-t".to_string(),
+            format!("{}", threads),
+            "-s".to_string(),
+            format!("{:.2}", min_percent_identity),
+            "--min-af".to_string(),
+            format!("{:.2}", min_alignment_fraction),
+            String::from("--full-matrix"),
+            String::from("--distance"),
         ]
     };
 
     log::info!("Computing pairwise distances with 'skani' (Shaw and Yu, 2023)");
-    let output = Command::new("skani")
-        .args(&args)
-        .output()?
-        .stdout;
+    let output = Command::new("skani").args(&args).output()?.stdout;
 
     let output_str = String::from_utf8_lossy(&output);
 
     // Regex to match non-numeric and non-tab characters (to find rows and columns).
     let re = Regex::new(r"\t").expect("Failed to compile regex");
+
+    // Vector to hold sequence IDs (from the first column).
+    let skani_ids: Vec<String> = output_str
+        .lines()
+        .skip(1) // Skip the first line (header).
+        .map(|line| {
+            re.split(line)
+                .next() // Get the first element (ID)
+                .unwrap()
+                .split_whitespace()
+                .collect_vec()[0]
+                .to_string()
+        })
+        .collect();
 
     let matrix: Vec<Vec<f64>> = output_str
         .lines()
@@ -142,7 +163,7 @@ pub fn skani_distance_matrix(
         .collect();
 
     let af_matrix_path = Path::new("skani_matrix.af");
-    
+
     let af_matrix: Vec<Vec<f64>> = if af_matrix_path.exists() {
         let af_file = File::open(af_matrix_path)?;
         let reader = BufReader::new(af_file);
@@ -163,19 +184,35 @@ pub fn skani_distance_matrix(
 
         af_matrix
     } else {
-        return Err(NetviewError::ParseSkaniMatrix);  // Handle case if the file doesn't exist
+        return Err(NetviewError::ParseSkaniMatrix); // Handle case if the file doesn't exist
     };
 
     let fasta_ids = extract_fasta_ids(&fasta)?;
 
+    let missing_ids = find_missing_ids(fasta_ids.clone(), skani_ids.clone());
+
+    log::info!("Missing: {:#?}", missing_ids);
+
     // Check if both matrices are square
-    if matrix.len() > 0 && matrix[0].len() == matrix.len() && af_matrix.len() > 0 && af_matrix[0].len() == af_matrix.len() {
-        Ok((matrix, af_matrix, fasta_ids))  // Return distance matrix (you can also return both if needed)
+    if matrix.len() > 0
+        && matrix[0].len() == matrix.len()
+        && af_matrix.len() > 0
+        && af_matrix[0].len() == af_matrix.len()
+    {
+        Ok((matrix, af_matrix, fasta_ids)) // Return distance matrix (you can also return both if needed)
     } else {
         Err(NetviewError::ParseSkaniMatrix)
     }
 }
 
+fn find_missing_ids(ids1: Vec<String>, ids2: Vec<String>) -> Vec<String> {
+    // Convert the Vecs to HashSets for efficient comparison
+    let set1: HashSet<String> = ids1.into_iter().collect();
+    let set2: HashSet<String> = ids2.into_iter().collect();
+
+    // Find the elements in set1 that are missing in set2
+    set1.difference(&set2).cloned().collect()
+}
 
 /// Writes a matrix of `f64` values to a specified file in tab-delimited format.
 ///
@@ -201,25 +238,23 @@ pub fn skani_distance_matrix(
 ///     vec![4.0, 5.0, 6.0],
 ///     vec![7.0, 8.0, 9.0],
 /// ];
-/// 
+///
 /// if let Err(e) = write_matrix_to_file(matrix, "matrix_output.txt") {
 ///     eprintln!("Error writing matrix to file: {:?}", e);
 /// }
 /// ```
-pub fn write_matrix_to_file(
-    matrix: Vec<Vec<f64>>, 
-    file_path: &Path
-) -> Result<(), NetviewError> {
+pub fn write_matrix_to_file(matrix: &Vec<Vec<f64>>, file_path: &Path) -> Result<(), NetviewError> {
     // Open the file for writing (or create it if it doesn't exist)
     let mut file = File::create(file_path)?;
 
     // Iterate through the rows of the matrix
     for row in matrix {
         // Convert each row into a tab-separated string
-        let row_str = row.iter()
-                         .map(|num| num.to_string())
-                         .collect::<Vec<String>>()
-                         .join("\t");
+        let row_str = row
+            .iter()
+            .map(|num| num.to_string())
+            .collect::<Vec<String>>()
+            .join("\t");
 
         // Write the row to the file, followed by a newline
         writeln!(file, "{}", row_str)?
@@ -227,8 +262,6 @@ pub fn write_matrix_to_file(
 
     Ok(())
 }
-
-
 
 /// Represents a row in the matrix for easier handling with serde.
 #[derive(Deserialize)]
@@ -256,15 +289,17 @@ struct MatrixRow(Vec<f64>);
 /// ```
 /// use netview::parse_distance_matrix;
 /// use std::path::Path;
-/// 
+///
 /// let distance_matrix = parse_distance_matrix(
 ///     Path::new("distance_matrix.csv")
 /// ).unwrap();
-/// 
+///
 /// println!("{:#?}", distance_matrix);
 /// ```
-pub fn parse_input_matrix<P: AsRef<Path>>(file_path: P, is_csv: bool) -> Result<Vec<Vec<f64>>, NetviewError> {
-
+pub fn parse_input_matrix<P: AsRef<Path>>(
+    file_path: P,
+    is_csv: bool,
+) -> Result<Vec<Vec<f64>>, NetviewError> {
     let file = File::open(file_path.as_ref()).map_err(|_| NetviewError::FileReadError)?;
 
     let mut rdr = ReaderBuilder::new()
@@ -272,18 +307,21 @@ pub fn parse_input_matrix<P: AsRef<Path>>(file_path: P, is_csv: bool) -> Result<
         .trim(Trim::All)
         .has_headers(false)
         .from_reader(file);
-    
+
     let mut matrix = Vec::new();
-    
+
     for result in rdr.deserialize() {
         let record: MatrixRow = result.map_err(|e| NetviewError::ParseError(e.to_string()))?;
         matrix.push(record.0);
     }
 
-    log::info!("Input matrix dimensions: {}", match matrix.is_empty() { 
-        true => "0 x 0".to_string(), 
-        false => format!("{} x {}", matrix.len(), matrix[matrix.len()-1].len()) 
-    });
+    log::info!(
+        "Input matrix dimensions: {}",
+        match matrix.is_empty() {
+            true => "0 x 0".to_string(),
+            false => format!("{} x {}", matrix.len(), matrix[matrix.len() - 1].len()),
+        }
+    );
 
     // Validate matrix format (symmetrical or lower triangular)
     // This step is crucial to ensure the matrix conforms to expectations
@@ -321,17 +359,17 @@ fn is_matrix_valid(matrix: &[Vec<f64>]) -> bool {
 ///
 /// ```
 /// use netview::make_symmetrical;
-/// use netview::NetviewError; 
-/// 
+/// use netview::NetviewError;
+///
 /// let lower_triangular_matrix = vec![
 ///     vec![0.0],
 ///     vec![1.0, 0.0],
 /// ];
-/// 
+///
 /// let symmetrical_matrix = make_symmetrical(
 ///     &lower_triangular_matrix
 /// ).unwrap();
-/// 
+///
 /// assert_eq!(symmetrical_matrix, vec![
 ///     vec![0.0, 1.0],
 ///     vec![1.0, 0.0],
@@ -344,7 +382,6 @@ fn is_matrix_valid(matrix: &[Vec<f64>]) -> bool {
 /// - The input matrix is empty but was expected to be non-empty.
 /// - The input matrix's dimensions do not match the expected dimensions.
 pub fn make_symmetrical(distance_matrix: &Vec<Vec<f64>>) -> Result<Vec<Vec<f64>>, NetviewError> {
-
     let n = distance_matrix.len();
 
     if distance_matrix.is_empty() {
@@ -368,8 +405,6 @@ pub fn make_symmetrical(distance_matrix: &Vec<Vec<f64>>) -> Result<Vec<Vec<f64>>
     Ok(matrix)
 }
 
-
-
 /// Computes the Euclidean distance matrix with options for parallel computation,
 /// handling lower triangular matrices, and manually setting the number of threads.
 ///
@@ -390,16 +425,16 @@ pub fn make_symmetrical(distance_matrix: &Vec<Vec<f64>>) -> Result<Vec<Vec<f64>>
 ///
 /// ```
 /// use netview::dist::euclidean_distance_of_distances;
-/// 
+///
 /// let distance_matrix = vec![
 ///     vec![0.0, 1.0],
 ///     vec![1.0, 0.0],
 /// ];
-/// 
+///
 /// let result = euclidean_distance_of_distances(
 ///     &distance_matrix, false, false, None
 /// ).unwrap();
-/// 
+///
 /// assert_eq!(result, vec![vec![0.0, 1.0], vec![1.0, 0.0]]);
 /// ```
 ///
@@ -414,7 +449,6 @@ pub fn euclidean_distance_of_distances(
     parallel: bool,
     num_threads: Option<usize>,
 ) -> Result<Vec<Vec<f64>>, NetviewError> {
-    
     let n = distance_matrix.len();
 
     // Initialize thread pool for parallel computation if requested
@@ -431,8 +465,16 @@ pub fn euclidean_distance_of_distances(
     let compute_distance = |i: usize, j: usize| -> f64 {
         let mut sum = 0.0;
         for k in 0..n {
-            let val_i = if is_lower_triangular && i < k { distance_matrix[k][i] } else { distance_matrix[i][k] };
-            let val_j = if is_lower_triangular && j < k { distance_matrix[k][j] } else { distance_matrix[j][k] };
+            let val_i = if is_lower_triangular && i < k {
+                distance_matrix[k][i]
+            } else {
+                distance_matrix[i][k]
+            };
+            let val_j = if is_lower_triangular && j < k {
+                distance_matrix[k][j]
+            } else {
+                distance_matrix[j][k]
+            };
             sum += (val_i - val_j).powi(2);
         }
         sum.sqrt()
@@ -440,9 +482,14 @@ pub fn euclidean_distance_of_distances(
 
     if parallel {
         // Collect computed distances in parallel
-        distances = (0..n).into_par_iter().flat_map(|i| {
-            (i + 1..n).into_par_iter().map(move |j| (i, j, compute_distance(i, j)))
-        }).collect();
+        distances = (0..n)
+            .into_par_iter()
+            .flat_map(|i| {
+                (i + 1..n)
+                    .into_par_iter()
+                    .map(move |j| (i, j, compute_distance(i, j)))
+            })
+            .collect();
     } else {
         // Collect computed distances sequentially
         for i in 0..n {
@@ -491,7 +538,6 @@ mod tests {
         assert!(matches!(result, Err(NetviewError::NonSquareMatrix)));
     }
 
-
     #[test]
     fn euclidean_with_uniform_values() {
         // Test a matrix with uniform values to ensure distances are computed correctly
@@ -509,8 +555,10 @@ mod tests {
             vec![1.0, 0.0, 1.0],
             vec![1.0, 1.0, 0.0],
         ];
-        let parallel_result = euclidean_distance_of_distances(&matrix.clone(), false, true, Some(4)).unwrap();
-        let sequential_result = euclidean_distance_of_distances(&matrix, false, false, None).unwrap();
+        let parallel_result =
+            euclidean_distance_of_distances(&matrix.clone(), false, true, Some(4)).unwrap();
+        let sequential_result =
+            euclidean_distance_of_distances(&matrix, false, false, None).unwrap();
         assert_eq!(parallel_result, sequential_result);
     }
 
@@ -519,7 +567,7 @@ mod tests {
         // Test behavior when an invalid thread pool size is specified
         let matrix = vec![vec![0.0, 1.0], vec![1.0, 0.0]];
         let result = euclidean_distance_of_distances(&matrix, false, true, Some(0)); // Invalid thread count
-        // Expect an error due to thread pool build failure
+                                                                                     // Expect an error due to thread pool build failure
         assert!(matches!(result, Err(NetviewError::ThreadPoolBuildError)));
     }
 
@@ -575,13 +623,19 @@ mod tests {
     #[test]
     fn symmetrical_large_matrix() {
         let size = 100;
-        let matrix = (0..size).map(|i| (0..=i).map(|j| (i + j) as f64).collect::<Vec<_>>()).collect::<Vec<_>>();
+        let matrix = (0..size)
+            .map(|i| (0..=i).map(|j| (i + j) as f64).collect::<Vec<_>>())
+            .collect::<Vec<_>>();
         let result = make_symmetrical(&matrix);
         assert!(result.is_ok());
         let sym_matrix = result.unwrap();
         for i in 0..size {
             for j in 0..=i {
-                assert_eq!(sym_matrix[i][j], sym_matrix[j][i], "Mismatch at ({}, {})", i, j);
+                assert_eq!(
+                    sym_matrix[i][j], sym_matrix[j][i],
+                    "Mismatch at ({}, {})",
+                    i, j
+                );
             }
         }
     }
@@ -589,11 +643,7 @@ mod tests {
     #[test]
     fn make_symmetrical_with_increasing_values() {
         // Test a lower triangular matrix with increasing values to ensure correct symmetrical transformation
-        let matrix = vec![
-            vec![1.0],
-            vec![2.0, 3.0],
-            vec![4.0, 5.0, 6.0],
-        ];
+        let matrix = vec![vec![1.0], vec![2.0, 3.0], vec![4.0, 5.0, 6.0]];
         let expected = vec![
             vec![1.0, 2.0, 4.0],
             vec![2.0, 3.0, 5.0],
@@ -693,7 +743,14 @@ mod tests {
         // Creates a 3x3 matrix
         let path = create_temp_matrix_file("0,1,2\n1,0,3\n2,3,0", "csv");
         let matrix = parse_input_matrix(path, false).unwrap();
-        assert_eq!(matrix, vec![vec![0.0, 1.0, 2.0], vec![1.0, 0.0, 3.0], vec![2.0, 3.0, 0.0]]);
+        assert_eq!(
+            matrix,
+            vec![
+                vec![0.0, 1.0, 2.0],
+                vec![1.0, 0.0, 3.0],
+                vec![2.0, 3.0, 0.0]
+            ]
+        );
     }
 
     #[test]
@@ -704,5 +761,4 @@ mod tests {
         // Expected to fail due to inconsistent delimiters within a TSV file
         assert!(matches!(result, Err(NetviewError::MatrixFormatError)));
     }
-
 }
