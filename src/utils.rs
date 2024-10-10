@@ -1,5 +1,8 @@
-use std::{fs::File, io::Write, path::PathBuf};
+use std::{ffi::OsStr, fs::File, io::{BufReader, BufWriter, Read, Write}, path::{Path, PathBuf}};
+use csv::{Reader, ReaderBuilder, Writer, WriterBuilder};
 use needletail::{parse_fastx_file, parser::LineEnding};
+use niffler::{get_reader, get_writer};
+use serde::Serialize;
 use crate::error::NetviewError;
 
 
@@ -18,6 +21,67 @@ pub fn write_fasta(
     writer.write_all(&ending)?;
     Ok(())
 }
+
+pub trait CompressionExt {
+    fn from_path<S: AsRef<OsStr> + ?Sized>(p: &S) -> Self;
+}
+
+/// Attempts to infer the compression type from the file extension.
+/// If the extension is not known, then Uncompressed is returned.
+impl CompressionExt for niffler::compression::Format {
+    fn from_path<S: AsRef<OsStr> + ?Sized>(p: &S) -> Self {
+        let path = Path::new(p);
+        match path.extension().map(|s| s.to_str()) {
+            Some(Some("gz")) => Self::Gzip,
+            Some(Some("bz") | Some("bz2")) => Self::Bzip,
+            Some(Some("lzma") | Some("xz")) => Self::Lzma,
+            _ => Self::No,
+        }
+    }
+}
+
+pub fn get_tsv_reader(file: &Path, flexible: bool) -> Result<Reader<Box<dyn Read>>, NetviewError> {
+
+    let buf_reader = BufReader::new(File::open(&file)?);
+    let (reader, _format) = get_reader(Box::new(buf_reader))?;
+
+    let csv_reader = ReaderBuilder::new()
+        .delimiter(b'\t')
+        .flexible(flexible) // Allows records with a different number of fields
+        .from_reader(reader);
+
+    Ok(csv_reader)
+}
+
+pub fn get_tsv_writer(
+    file: &Path,
+) -> Result<Writer<Box<dyn Write>>, NetviewError> {
+    
+    let buf_writer = BufWriter::new(File::create(&file)?);
+    let writer = get_writer(Box::new(buf_writer), niffler::Format::from_path(file), niffler::compression::Level::Nine)?;
+
+    let csv_writer = WriterBuilder::new()
+        .delimiter(b'\t')
+        .from_writer(writer);
+
+    Ok(csv_writer)
+}
+
+
+pub fn write_tsv<T: Serialize>(data: &Vec<T>, file: &Path) -> Result<(), NetviewError> {
+
+    let mut writer = get_tsv_writer(file)?;
+
+    for value in data {
+        // Serialize each value in the vector into the writer
+        writer.serialize(&value)?;
+    }
+
+    // Flush and complete writing
+    writer.flush()?;
+    Ok(())
+}
+
 
 
 /// Concatenates multiple Fasta files into a single file.

@@ -44,6 +44,9 @@ pub fn main() -> Result<(), NetviewError> {
                     args.afrac.clone(),
                     args.ids.clone(),
                     false,
+                    args.threads,
+                    args.chunk_size,
+                    args.edge_threshold
                 ).expect(&format!("Failed to create graph (k = {k})"));
                 
                 let output = if args.k.len() == 1 {
@@ -63,7 +66,7 @@ pub fn main() -> Result<(), NetviewError> {
         },
         Commands::Dist(args) => {
 
-            let (dist, af, ids) = skani_distance_matrix(
+            let (dist, af, ids, excluded) = skani_distance_matrix(
                 &args.fasta, 
                 args.marker_compression_factor, 
                 args.compression_factor, 
@@ -77,13 +80,16 @@ pub fn main() -> Result<(), NetviewError> {
             write_matrix_to_file(&dist, &args.dist)?;
 
             if let Some(path) = &args.afrac {
-
                 log::info!("Writing alignment fraction matrix to: {}", path.display());
                 write_matrix_to_file(&af, &path)?;
             }
             if let Some(path) = &args.ids {
                 log::info!("Writing sequence identifiers to: {}", path.display());
                 write_ids(&ids, &path)?;
+            }
+            if let Some(path) = &args.excluded {
+                log::info!("Writing excluded sequence identifiers to: {}", path.display());
+                write_ids(&excluded, &path)?;
             }
         },
         Commands::Label(args) => {
@@ -157,7 +163,9 @@ pub fn main() -> Result<(), NetviewError> {
                 &args.outdir,
                 args.all,
                 args.basename.clone(),
-                args.threads
+                args.threads,
+                args.chunk_size,
+                args.edge_threshold.clone()
             )?;
             
         },

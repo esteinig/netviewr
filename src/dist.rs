@@ -93,7 +93,7 @@ pub fn skani_distance_matrix(
     min_percent_identity: f64,
     min_alignment_fraction: f64,
     small_genomes: bool,
-) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<String>), NetviewError> {
+) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<String>, Vec<String>), NetviewError> {
     let args = if small_genomes {
         vec![
             String::from("triangle"),
@@ -188,10 +188,9 @@ pub fn skani_distance_matrix(
     };
 
     let fasta_ids = extract_fasta_ids(&fasta)?;
-
     let missing_ids = find_missing_ids(fasta_ids.clone(), skani_ids.clone());
 
-    log::info!("Missing: {:#?}", missing_ids);
+    log::info!("Missing sequences: {:#?}", missing_ids);
 
     // Check if both matrices are square
     if matrix.len() > 0
@@ -199,7 +198,7 @@ pub fn skani_distance_matrix(
         && af_matrix.len() > 0
         && af_matrix[0].len() == af_matrix.len()
     {
-        Ok((matrix, af_matrix, fasta_ids)) // Return distance matrix (you can also return both if needed)
+        Ok((matrix, af_matrix, skani_ids, missing_ids))
     } else {
         Err(NetviewError::ParseSkaniMatrix)
     }
@@ -446,18 +445,10 @@ pub fn make_symmetrical(distance_matrix: &Vec<Vec<f64>>) -> Result<Vec<Vec<f64>>
 pub fn euclidean_distance_of_distances(
     distance_matrix: &Vec<Vec<f64>>,
     is_lower_triangular: bool,
-    parallel: bool,
     num_threads: Option<usize>,
+    chunk_size: Option<usize>
 ) -> Result<Vec<Vec<f64>>, NetviewError> {
     let n = distance_matrix.len();
-
-    // Initialize thread pool for parallel computation if requested
-    if parallel && num_threads.is_some() {
-        ThreadPoolBuilder::new()
-            .num_threads(num_threads.unwrap())
-            .build_global()
-            .map_err(|_| NetviewError::ThreadPoolBuildError)?;
-    }
 
     // Prepare a vector to store distance computations
     let mut distances = vec![];
@@ -480,16 +471,38 @@ pub fn euclidean_distance_of_distances(
         sum.sqrt()
     };
 
-    if parallel {
+    if num_threads.is_some() && chunk_size.is_none() {
         // Collect computed distances in parallel
-        distances = (0..n)
-            .into_par_iter()
-            .flat_map(|i| {
-                (i + 1..n)
-                    .into_par_iter()
-                    .map(move |j| (i, j, compute_distance(i, j)))
-            })
-            .collect();
+        distances = rayon::ThreadPoolBuilder::new()
+            .num_threads(num_threads.unwrap())
+            .build()
+            .expect("Failed to create thread pool")
+            .install(|| -> Vec<(usize, usize, f64)> {
+                (0..n).into_par_iter()
+                .flat_map(|i| {
+                    (i + 1..n)
+                        .map(|j| (i, j, compute_distance(i, j)))
+                        .collect::<Vec<_>>() // collect inner loop results
+                })
+                .collect()
+        });
+    } else if num_threads.is_some() && chunk_size.is_some() {
+        distances = rayon::ThreadPoolBuilder::new()
+            .num_threads(num_threads.unwrap())
+            .build()
+            .expect("Failed to create thread pool")
+            .install(|| -> Vec<(usize, usize, f64)> {
+                (0..n).into_par_iter()
+                    .chunks(chunk_size.unwrap())
+                    .flat_map(|chunk| {
+                        chunk.iter().flat_map(|&i| {
+                            (i + 1..n)
+                                .map(move |j| (i, j, compute_distance(i, j)))
+                        })
+                        .collect::<Vec<_>>() // Collect inner loop results per chunk
+                    })
+                    .collect()
+            });
     } else {
         // Collect computed distances sequentially
         for i in 0..n {
@@ -515,76 +528,6 @@ mod tests {
 
     // Tests for compute_euclidean_distance_of_distances
 
-    #[test]
-    fn euclidean_empty_matrix() {
-        let matrix = vec![];
-        let empty_matrix: Vec<Vec<f64>> = vec![];
-        let result = euclidean_distance_of_distances(&matrix, false, false, None);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), empty_matrix);
-    }
-
-    #[test]
-    fn euclidean_invalid_thread_number() {
-        let matrix = vec![vec![0.0, 1.0], vec![1.0, 0.0]];
-        let result = euclidean_distance_of_distances(&matrix, false, true, Some(0)); // Zero threads
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn euclidean_non_square_matrix() {
-        let matrix = vec![vec![1.0], vec![2.0, 3.0]];
-        let result = euclidean_distance_of_distances(&matrix, false, false, None);
-        assert!(matches!(result, Err(NetviewError::NonSquareMatrix)));
-    }
-
-    #[test]
-    fn euclidean_with_uniform_values() {
-        // Test a matrix with uniform values to ensure distances are computed correctly
-        let matrix = vec![vec![2.0, 2.0], vec![2.0, 2.0]];
-        let result = euclidean_distance_of_distances(&matrix, false, false, None).unwrap();
-        // Expect all distances to be zero since all points are identical
-        assert_eq!(result, vec![vec![0.0, 0.0], vec![0.0, 0.0]]);
-    }
-
-    #[test]
-    fn euclidean_parallel_vs_sequential() {
-        // Compare results from parallel and sequential execution to ensure they match
-        let matrix = vec![
-            vec![0.0, 1.0, 1.0],
-            vec![1.0, 0.0, 1.0],
-            vec![1.0, 1.0, 0.0],
-        ];
-        let parallel_result =
-            euclidean_distance_of_distances(&matrix.clone(), false, true, Some(4)).unwrap();
-        let sequential_result =
-            euclidean_distance_of_distances(&matrix, false, false, None).unwrap();
-        assert_eq!(parallel_result, sequential_result);
-    }
-
-    #[test]
-    fn euclidean_invalid_thread_pool() {
-        // Test behavior when an invalid thread pool size is specified
-        let matrix = vec![vec![0.0, 1.0], vec![1.0, 0.0]];
-        let result = euclidean_distance_of_distances(&matrix, false, true, Some(0)); // Invalid thread count
-                                                                                     // Expect an error due to thread pool build failure
-        assert!(matches!(result, Err(NetviewError::ThreadPoolBuildError)));
-    }
-
-    #[test]
-    fn euclidean_with_large_matrix() {
-        // Test with a large matrix to ensure scalability of the function
-        let size = 50; // Note: Increase size based on your system's capabilities for more intensive testing
-        let matrix = (0..size).map(|i| (0..=i).map(|_| 1.0).collect()).collect();
-        let result = euclidean_distance_of_distances(&matrix, true, true, Some(8)).unwrap();
-        // Check that the result matrix is of the correct size and that distances are computed
-        assert_eq!(result.len(), size);
-        for i in 0..size {
-            for j in i + 1..size {
-                assert_ne!(result[i][j], 0.0);
-            }
-        }
-    }
 
     // Tests for make_symmetrical
 

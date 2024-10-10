@@ -54,12 +54,6 @@ pub struct PredictArgs {
     /// K parameter for mutual nearest neighbor algorithm
     #[clap(long = "mknn", short = 'k', num_args(0..), default_value="20")]
     pub k: usize,
-    /// Configuration as TOML file (.toml)
-    #[clap(long, short = 't')]
-    pub toml: Option<PathBuf>,
-    /// Configuration as JSON file (.json)
-    #[clap(long, short = 'j')]
-    pub json: Option<PathBuf>,
     /// Propagate all labels across the graph topology
     #[clap(long, short = 'a')]
     pub all: bool,
@@ -67,8 +61,28 @@ pub struct PredictArgs {
     #[clap(long, short = 'n', default_value="netview")]
     pub basename: String,
     /// Threads for distance matrix computations
-    #[clap(long, short = 't', default_value = "4")]
-    pub threads: usize,
+    #[clap(long, short = 't')]
+    pub threads: Option<usize>,
+    /// Chunk size for distance abstraction computation
+    /// 
+    /// Requires --threads for parallel chunk-wise computation of
+    /// distance abstractions.
+    #[clap(long, short = 'c')]
+    pub chunk_size: Option<usize>,
+    
+    /// Distance threshold for mutual nearest neighbor edges
+    /// 
+    /// Includes only mutual nearest neighbors as edges if their distance
+    /// is not equal or greater than this value - used to exclude neighbors
+    /// in sparse distance matrices where there is no similarity at all (d >= 100.0)
+    #[clap(long, short='e')]
+    pub edge_threshold: Option<f64>,
+    /// Netview configuration as JSON file (.json)
+    #[clap(long)]
+    pub json: Option<PathBuf>,
+    /// Netview configuration as TOML file (.toml)
+    #[clap(long)]
+    pub toml: Option<PathBuf>,
 }
 
 #[derive(Debug, Args)]
@@ -88,7 +102,7 @@ pub struct GraphArgs {
     /// Include distances as edge weights in the graph
     #[clap(long, short = 'w')]
     pub weights: bool,
-    /// If output is an alignment matrix absence of an edge is 'NaN' instead of '0.0' 
+    /// If output is an adjacency matrix, absence of an edge is 'NaN' instead of '0.0' 
     #[clap(long, short = 'n')]
     pub nan: bool,
     /// Graph output file
@@ -97,6 +111,22 @@ pub struct GraphArgs {
     /// Output format for graph
     #[clap(long, short = 'f', default_value="json")]
     pub format: GraphFormat,
+    /// Threads for distance abstraction computation
+    #[clap(long, short = 't')]
+    pub threads: Option<usize>,
+    /// Chunk size for distance abstraction computation
+    /// 
+    /// Requires --threads for parallel chunk-wise computation of
+    /// distance abstractions.
+    #[clap(long, short = 'c')]
+    pub chunk_size: Option<usize>,
+    /// Distance threshold for mutual nearest neighbor edges
+    /// 
+    /// Includes only mutual nearest neighbors as edges if their distance
+    /// is not equal or greater than this value - used to exclude neighbors
+    /// in sparse distance matrices where there is no similarity at all (d >= 100.0)
+    #[clap(long, short='e')]
+    pub edge_threshold: Option<f64>,
 }
 
 #[derive(Debug, Args)]
@@ -192,6 +222,9 @@ pub struct DistArgs {
     /// Output sequence identifiers in order of matrix rows 
     #[clap(long, short = 'i')]
     pub ids: Option<PathBuf>,
+    /// Output sequence identifiers excluded during 'skani' computations 
+    #[clap(long, short = 'e')]
+    pub excluded: Option<PathBuf>,
     /// Databases for subtyping
     #[clap(long, short = 'c', default_value="30")]
     pub compression_factor: usize,

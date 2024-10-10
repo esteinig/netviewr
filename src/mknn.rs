@@ -55,8 +55,12 @@ pub fn k_mutual_nearest_neighbors(distance_matrix: &Vec<Vec<f64>>, k: usize) -> 
     if k == 0 || k >= n {
         return Err(NetviewError::InvalidK);
     }
+    if n == 1 {
+        return Ok(vec![vec![]]); // Edge case where n == 1, no neighbors possible
+    }
 
     // Transform lower triangular matrix to a symmetrical matrix if needed
+    // may not be particularly efficient at the moment
     let matrix = make_symmetrical(distance_matrix)?;
 
     // Compute nearest neighbors in parallel
@@ -69,14 +73,15 @@ pub fn k_mutual_nearest_neighbors(distance_matrix: &Vec<Vec<f64>>, k: usize) -> 
         }
 
         // Sort by distance and select the k nearest
-        neighbors.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        neighbors.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));  // TODO: check if suitable to have Ordering::Equal
         neighbors.into_iter().map(|(index, _)| index).take(k).collect::<Vec<usize>>()
     }).collect();
 
-    // Identify mutual nearest neighbors
+    // Identify mutual nearest neighbors - this is O(k), may need better solution
     let mutual_nearest_neighbors: Vec<Vec<usize>> = nearest_neighbors.iter().enumerate().map(|(i, neighbors)| {
         neighbors.iter().filter(|&&j| nearest_neighbors[j].contains(&i)).cloned().collect()
     }).collect();
+
 
     Ok(mutual_nearest_neighbors)
 }
@@ -87,7 +92,8 @@ pub fn convert_to_graph(
     mutual_nearest_neighbors: &Vec<Vec<usize>>, 
     distance_matrix: Option<&Vec<Vec<f64>>>,  // Distance matrix
     af_matrix: Option<&Vec<Vec<f64>>>,        // Alignment fraction matrix
-    identifiers: Option<Vec<String>>          // Node identifiers / row identifiers
+    identifiers: Option<Vec<String>>,          // Node identifiers / row identifiers, 
+    distance_threshold: Option<f64>
 ) -> Result<NetviewGraph, NetviewError> {
     
     // Create an undirected graph with NodeLabel and EdgeLabel
@@ -131,6 +137,13 @@ pub fn convert_to_graph(
                     Some(matrix) => matrix.get(node_index).and_then(|row| row.get(neighbor)).copied().unwrap_or(1.0),
                     None => 1.0,  // Default weight if no distance matrix is provided
                 };
+
+                if let Some(threshold) = distance_threshold {
+                    if dist >= threshold {
+                        log::debug!("Edge {node_index} - {neighbor} not considered: {dist}");
+                        continue; // do not consider this neighbor if the distance is above the threshold
+                    }
+                }
 
                 // Get the alignment fraction from the af_matrix, if provided
                 let af = match af_matrix {

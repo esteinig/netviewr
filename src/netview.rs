@@ -11,7 +11,7 @@ use crate::dist::{euclidean_distance_of_distances, parse_identifiers, parse_inpu
 use crate::mknn::{convert_to_graph, k_mutual_nearest_neighbors, write_graph_to_file, GraphFormat, GraphJson};
 use crate::label::{label_nodes, label_propagation, read_labels_from_file, write_graph_labels_to_file, VoteWeights};
 use crate::error::NetviewError;
-use crate::utils::{concatenate_fasta_files, get_ids_from_fasta_files};
+use crate::utils::{concatenate_fasta_files, get_ids_from_fasta_files, write_tsv};
 
 pub type NetviewGraph = Graph<NodeLabel, EdgeLabel, Undirected>;
 
@@ -25,8 +25,10 @@ pub struct NetviewPredictFiles {
     dist: PathBuf,
     af: PathBuf,
     id: PathBuf,
+    missing: PathBuf,
     graph_json: PathBuf,
     graph_edges: PathBuf,
+    graph_edges_weight: PathBuf,
     graph_predict: PathBuf,
     label_predict: PathBuf,
 }
@@ -38,8 +40,10 @@ impl NetviewPredictFiles {
             dist: outdir.join(format!("{name}.dist")),
             af: outdir.join(format!("{name}.af")),
             id: outdir.join(format!("{name}.id")),
+            missing: outdir.join(format!("{name}.missing.id")),
             graph_json: outdir.join(format!("{name}.json")),
             graph_edges: outdir.join(format!("{name}.edges")),
+            graph_edges_weight: outdir.join(format!("{name}.weight.edges")),
             graph_predict: outdir.join(format!("{name}.predict.json")),
             label_predict: outdir.join(format!("{name}.predict.csv")),
         }
@@ -62,7 +66,9 @@ impl Netview {
         outdir: &PathBuf,
         propagate_all: bool,
         basename: String,
-        threads: usize
+        threads: Option<usize>,
+        chunk_size: Option<usize>,
+        edge_threshold: Option<f64>
     ) -> Result<(), NetviewError> {
         
         if !outdir.exists() {
@@ -74,11 +80,11 @@ impl Netview {
        
         concatenate_fasta_files(db, fasta, &files.data)?;
 
-        let (dist, af, ids) = self.skani_distance(
+        let (dist, af, ids, missing_ids) = self.skani_distance(
             &files.data,
             self.config.skani.marker_compression_factor,
             self.config.skani.compression_factor,
-            threads,
+            threads.unwrap_or(1),
             self.config.skani.min_percent_identity,
             self.config.skani.min_alignment_fraction,
             self.config.skani.small_genomes
@@ -87,9 +93,10 @@ impl Netview {
         write_matrix_to_file(&dist, &files.dist)?;
         write_matrix_to_file(&af, &files.af)?;
         write_ids(&ids, &files.id)?;
+        write_tsv(&missing_ids, &files.missing)?;
 
         let mut graph = self.graph_from_vecs(
-            dist, k, Some(af), Some(ids)
+            dist, k, Some(af), Some(ids), threads, chunk_size, edge_threshold
         )?;
 
         let db_labels: Vec<Option<String>> = read_labels_from_file(&labels, false)?
@@ -106,6 +113,7 @@ impl Netview {
 
         write_graph_to_file(&graph, &files.graph_json, &GraphFormat::Json, true)?;
         write_graph_to_file(&graph, &files.graph_edges, &GraphFormat::Edges, false)?;
+        write_graph_to_file(&graph, &files.graph_edges_weight, &GraphFormat::Edges, true)?;
 
         self.label_propagation(
             &mut graph,
@@ -133,7 +141,7 @@ impl Netview {
         min_percent_identity: f64,
         min_alignment_fraction: f64,
         small_genomes: bool
-    ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<String>), NetviewError> {
+    ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<String>, Vec<String>), NetviewError> {
         skani_distance_matrix(
             fasta,
             marker_compression_factor,
@@ -150,7 +158,10 @@ impl Netview {
         k: usize, 
         af_matrix: Option<PathBuf>, 
         identifiers: Option<PathBuf>,
-        is_csv: bool
+        is_csv: bool,
+        threads: Option<usize>,
+        chunk_size: Option<usize>,
+        edge_threshold: Option<f64>
     ) -> Result<NetviewGraph, NetviewError> {
         
         log::info!("Reading distance matrix: {}", dist_matrix.display());
@@ -174,8 +185,8 @@ impl Netview {
         let distance_of_distances = euclidean_distance_of_distances(
             &distance, 
             false, 
-            false, 
-            None
+            threads,
+            chunk_size
         )?;
         
         log::info!("Computing mutual nearest neighbor graph (k = {k})");
@@ -188,7 +199,8 @@ impl Netview {
             &mutual_nearest_neighbors, 
             Some(&distance), 
             af.as_ref(),
-            ids
+            ids,
+            edge_threshold
         )?;       
 
         Ok(mknn_graph)
@@ -198,7 +210,10 @@ impl Netview {
         dist_matrix: Vec<Vec<f64>>, 
         k: usize, 
         af_matrix: Option<Vec<Vec<f64>>>,
-        ids: Option<Vec<String>>
+        ids: Option<Vec<String>>,
+        threads: Option<usize>,
+        chunk_size: Option<usize>,
+        edge_threshold: Option<f64>
     ) -> Result<NetviewGraph, NetviewError> {
         
 
@@ -206,8 +221,8 @@ impl Netview {
         let distance_of_distances = euclidean_distance_of_distances(
             &dist_matrix, 
             false, 
-            false, 
-            None
+            threads,
+            chunk_size
         )?;
         
         log::info!("Computing mutual nearest neighbor graph (k = {k})");
@@ -220,7 +235,8 @@ impl Netview {
             &mutual_nearest_neighbors, 
             Some(&dist_matrix), 
             af_matrix.as_ref(),
-            ids
+            ids,
+            edge_threshold
         )?;
 
         Ok(mknn_graph)
