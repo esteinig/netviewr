@@ -41,7 +41,7 @@ rand = "0.8.5"
 
 plotters = { version = "0.3.7", optional = true }
 plotters-bitmap = { version = "0.3.7", optional = true }
-toml = "0.8.19"
+toml = "0.8.14"
 
 [features]
 default = []
