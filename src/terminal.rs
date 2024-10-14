@@ -125,7 +125,7 @@ pub struct GraphArgs {
     /// Includes only mutual nearest neighbors as edges if their distance
     /// is not equal or greater than this value - used to exclude neighbors
     /// in sparse distance matrices where there is no similarity at all (d >= 100.0)
-    #[clap(long, short='e')]
+    #[clap(long, short='e', default_value="100")]
     pub edge_threshold: Option<f64>,
 }
 
@@ -175,7 +175,7 @@ pub struct CrossValidationArgs {
     /// Minimum sequence length to be included
     #[clap(long, short = 'm', default_value="0")]
     pub min_length: usize,
-    /// Limit the number of sampled genomes  
+    /// Limit the number of sampled genomes per label  
     #[clap(long, short = 'n')]
     pub max_per_label: Option<usize>,
     /// Output directory for validation data and operations

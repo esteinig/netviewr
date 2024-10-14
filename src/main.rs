@@ -118,7 +118,7 @@ pub fn main() -> Result<(), NetviewError> {
                 args.unlabelled
             );
 
-            netview.write_labels(&graph, &args.output_labels)?;
+            netview.write_labels(&graph, &args.output_labels, None)?;
             
         },
         Commands::Derep(args) => {

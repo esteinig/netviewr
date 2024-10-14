@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
 
+use std::collections::HashSet;
 use std::fs::File; 
 use std::path::Path;
 use crate::centrality::betweenness_centrality;
@@ -43,7 +44,8 @@ pub fn read_labels_from_file<P: AsRef<Path>>(
 pub fn write_graph_labels_to_file<P: AsRef<Path>>(
     graph: &NetviewGraph,        
     output_file: P,                
-    tsv: bool                      
+    ids: Option<Vec<String>>,
+    tsv: bool,                
 ) -> Result<(), NetviewError> {
 
     // Open the output file for writing
@@ -59,6 +61,14 @@ pub fn write_graph_labels_to_file<P: AsRef<Path>>(
     // Iterate over each node in the graph and extract the id and label
     for node in graph.node_indices() {
         if let Some(node_label) = graph.node_weight(node) {
+
+            if let Some(id) = &node_label.id {
+                if let Some(ref ids) = ids {
+                    if !ids.contains(id) {
+                        continue;
+                    }
+                }
+            }
 
             // Construct a Label struct
             let label = Label {
