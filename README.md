@@ -54,8 +54,7 @@ If you have trouble accessing the paper, have a look in the [documentation](docs
 # install.packages("netviewr")
 
 # Development version from GitHub:
-# install.packages("devtools")
-devtools::install_github("esteinig/netviewr")
+remotes::install_github("esteinig/netviewr")
 ```
 
 ## Population graph example
